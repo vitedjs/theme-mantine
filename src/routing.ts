@@ -40,7 +40,7 @@ export function makeLocalizedPath(
   return localizedPath || '/';
 }
 
-function normalizeBaseURL(baseURL: string): string {
+export function normalizeBaseURL(baseURL: string): string {
   const segments = baseURL.split('/').filter(Boolean);
   return segments.length > 0 ? `/${segments.join('/')}` : '/';
 }

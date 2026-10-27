@@ -15,8 +15,9 @@ import {
 } from '@mantine/core';
 import { List, Moon, Sun, X } from '@phosphor-icons/react';
 import type { ComponentType, ReactElement, ReactNode } from 'react';
-import { useEffect, useState } from 'react';
-import { makeLocalizedPath, resolveLocalizedRoute } from './routing';
+import { Fragment, useEffect, useState } from 'react';
+import { Link, Route, Router, Switch, useLocation } from 'wouter';
+import { makeLocalizedPath, normalizeBaseURL, resolveLocalizedRoute } from './routing';
 import '@mantine/core/styles.css';
 
 export interface VitedPage {
@@ -67,22 +68,20 @@ function ThemeApp({
   const locales = supportedLocales.length > 0
     ? supportedLocales
     : [...new Set(pages.map((item) => item.locale))];
-  const [pathname, setPathname] = useState(readPathname);
-  const [locale, setLocale] = useState(
-    () => resolveLocalizedRoute(readPathname(), locales, baseURL).locale,
-  );
+  const [pathname, navigate] = useLocation();
+  const route = resolveLocalizedRoute(pathname, locales);
+  const locale = route.locale;
   const [mobileOpened, setMobileOpened] = useState(false);
   const { setColorScheme } = useMantineColorScheme();
   const colorScheme = useComputedColorScheme('light', { getInitialValueInEffect: true });
   const copy = getCopy(locale);
-  const route = resolveLocalizedRoute(pathname, locales, baseURL);
-  const page = findPage(pages, route.pathname, locale);
-  const Content = page?.component;
+  const page = pages.find((item) => item.path === route.pathname && item.locale === locale) ??
+    pages.find((item) => item.path === route.pathname);
+  const localizedPages = getLocalizedPages(pages, locales);
   const navigation = menu?.length
     ? (
       <MenuItems
         entries={menu}
-        baseURL={baseURL}
         locales={locales}
         locale={locale}
         activePath={page?.path}
@@ -92,7 +91,6 @@ function ThemeApp({
     : (
       <PageNavigation
         pages={pages.filter((item) => item.locale === locale)}
-        baseURL={baseURL}
         locales={locales}
         activePath={page?.path}
         locale={locale}
@@ -101,27 +99,15 @@ function ThemeApp({
     );
 
   useEffect(() => {
-    const updateLocation = () => {
-      setPathname(readPathname());
-      setLocale(resolveLocalizedRoute(readPathname(), locales, baseURL).locale);
-    };
-    window.addEventListener('popstate', updateLocation);
-    return () => window.removeEventListener('popstate', updateLocation);
-  }, [baseURL, locales]);
-
-  useEffect(() => {
     document.documentElement.lang = locale;
   }, [locale]);
 
   function changeLocale(nextLocale: string | null) {
     if (!nextLocale) return;
-    setLocale(nextLocale);
-    const localizedPath = makeLocalizedPath(baseURL, route.pathname, nextLocale, locales);
+    const localizedPath = makeLocalizedPath('/', route.pathname, nextLocale, locales);
     const url = new URL(window.location.href);
-    url.pathname = localizedPath;
     url.searchParams.delete('lang');
-    window.history.pushState(null, '', `${url.pathname}${url.search}${url.hash}`);
-    setPathname(localizedPath);
+    navigate(`${localizedPath}${url.search}${url.hash}`);
   }
 
   return (
@@ -188,9 +174,19 @@ function ThemeApp({
       </AppShell.Navbar>
       <AppShell.Main>
         <Container size="lg" py="md">
-          {Content
-            ? <Content />
-            : <Text c="dimmed">{copy.noDocuments}</Text>}
+          <Switch location={pathname}>
+            {localizedPages.map(({ pathname: localizedPath, page: localizedPage }) => {
+              const Content = localizedPage.component;
+              return (
+                <Route key={`${localizedPath}:${localizedPage.locale}`} path={localizedPath}>
+                  <Content />
+                </Route>
+              );
+            })}
+            <Route>
+              <Text c="dimmed">{copy.noDocuments}</Text>
+            </Route>
+          </Switch>
         </Container>
       </AppShell.Main>
     </AppShell>
@@ -198,9 +194,12 @@ function ThemeApp({
 }
 
 export function VitedTheme(props: VitedThemeProps): ReactElement {
+  const normalizedBaseURL = normalizeBaseURL(props.baseURL ?? '/');
   return (
     <MantineProvider defaultColorScheme="auto">
-      <ThemeApp {...props} />
+      <Router base={normalizedBaseURL === '/' ? '' : normalizedBaseURL}>
+        <ThemeApp {...props} />
+      </Router>
     </MantineProvider>
   );
 }
@@ -215,7 +214,6 @@ interface PageNavigationNode {
 }
 
 interface NavigationProps {
-  baseURL: string;
   locales: string[];
   locale: string;
   activePath?: string;
@@ -224,7 +222,6 @@ interface NavigationProps {
 
 function PageNavigation({
   pages,
-  baseURL,
   locales,
   activePath,
   locale,
@@ -256,36 +253,44 @@ function PageNavigation({
     }
   }
 
-  return <>{renderPageNavigationNodes(nodes, { baseURL, locales, locale, activePath, onNavigate })}</>;
+  return <>{renderPageNavigationNodes(nodes, { locales, locale, activePath, onNavigate })}</>;
 }
 
 function renderPageNavigationNodes(
   nodes: PageNavigationNode[],
   props: NavigationProps,
 ): ReactNode {
-  return nodes.map((node) => (
-    <NavLink
-      key={node.key}
-      label={node.title}
-      href={node.page
-        ? makeLocalizedPath(props.baseURL, node.page.path, props.locale, props.locales)
-        : undefined}
-      active={node.page?.path === props.activePath}
-      defaultOpened={node.children.some((child) =>
-        child.page?.path === props.activePath || props.activePath?.startsWith(`${child.key}/`)
-      )}
-      onClick={node.page ? props.onNavigate : undefined}
-    >
-      {node.children.length > 0
-        ? renderPageNavigationNodes(node.children, props)
-        : null}
-    </NavLink>
-  ));
+  return nodes.map((node) => {
+    const navLink = (
+      <NavLink
+        label={node.title}
+        active={node.page?.path === props.activePath}
+        defaultOpened={node.children.some((child) =>
+          child.page?.path === props.activePath || props.activePath?.startsWith(`${child.key}/`)
+        )}
+        component={node.page ? 'a' : 'button'}
+      >
+        {node.children.length > 0 ? renderPageNavigationNodes(node.children, props) : null}
+      </NavLink>
+    );
+
+    return node.page ? (
+      <Link
+        key={node.key}
+        to={makeLocalizedPath('/', node.page.path, props.locale, props.locales)}
+        asChild
+        onClick={props.onNavigate}
+      >
+        {navLink}
+      </Link>
+    ) : (
+      <Fragment key={node.key}>{navLink}</Fragment>
+    );
+  });
 }
 
 function MenuItems({
   entries,
-  baseURL,
   locales,
   locale,
   activePath,
@@ -296,22 +301,21 @@ function MenuItems({
       {entries.map((entry, index) => {
         if (entry.divider) return <Divider key={`divider-${index}`} my="xs" />;
         const href = entry.path
-          ? makeLocalizedPath(baseURL, entry.path, locale, locales)
+          ? makeLocalizedPath('/', entry.path, locale, locales)
           : entry.link ?? '#';
         const label = entry.text ?? entry.file ?? entry.path ?? entry.link ?? '';
-        return (
+        const navLink = (
           <NavLink
-            key={`${href}:${index}`}
             label={label}
-            href={href}
+            href={entry.path ? undefined : href}
             active={entry.path === activePath}
             defaultOpened={Boolean(entry.children?.length)}
-            onClick={onNavigate}
+            component={entry.path || entry.link ? 'a' : 'button'}
+            onClick={entry.path ? undefined : onNavigate}
           >
             {entry.children?.length
               ? <MenuItems
                   entries={entry.children}
-                  baseURL={baseURL}
                   locales={locales}
                   locale={locale}
                   activePath={activePath}
@@ -320,13 +324,45 @@ function MenuItems({
               : null}
           </NavLink>
         );
+        return entry.path ? (
+          <Link
+            key={`${href}:${index}`}
+            to={href}
+            asChild
+            onClick={onNavigate}
+          >
+            {navLink}
+          </Link>
+        ) : (
+          <Fragment key={`${href}:${index}`}>{navLink}</Fragment>
+        );
       })}
     </>
   );
 }
 
-function readPathname(): string {
-  return typeof window === 'undefined' ? '/' : window.location.pathname;
+function getLocalizedPages(
+  pages: VitedPage[],
+  locales: string[],
+): Array<{ pathname: string; page: VitedPage }> {
+  const pagePaths = [...new Set(pages.map((page) => page.path))];
+  const routes: Array<{ pathname: string; page: VitedPage }> = [];
+  const seen = new Set<string>();
+
+  for (const locale of locales) {
+    for (const pagePath of pagePaths) {
+      const page = pages.find((item) => item.path === pagePath && item.locale === locale) ??
+        pages.find((item) => item.path === pagePath);
+      if (!page) continue;
+
+      const pathname = makeLocalizedPath('/', pagePath, locale, locales);
+      if (seen.has(pathname)) continue;
+      seen.add(pathname);
+      routes.push({ pathname, page });
+    }
+  }
+
+  return routes;
 }
 
 function getLocaleName(locale: string): string {

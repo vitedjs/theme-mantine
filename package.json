@@ -31,14 +31,19 @@
       "import": "./dist/index.mjs"
     }
   },
-  "files": ["dist", "LICENSE", "README.md"],
+  "files": [
+    "dist",
+    "LICENSE",
+    "README.md"
+  ],
   "scripts": {
     "build": "tsdown",
     "test": "vitest run",
     "test:watch": "vitest"
   },
   "dependencies": {
-    "@phosphor-icons/react": "^2.1.10"
+    "@phosphor-icons/react": "^2.1.10",
+    "wouter": "^3.13.0"
   },
   "peerDependencies": {
     "@mantine/core": "^9.7.4",
