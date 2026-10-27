@@ -16,25 +16,69 @@ import {
   useComputedColorScheme,
   useMantineColorScheme,
 } from '@mantine/core';
+import {
+  CodeHighlight,
+  CodeHighlightAdapterProvider,
+  createShikiAdapter,
+} from '@mantine/code-highlight';
 import { Spotlight, type SpotlightActionData } from '@mantine/spotlight';
+import { bundledLanguages, createHighlighter, type BundledLanguage } from 'shiki';
+import parse, { Element as HtmlElement, type DOMNode } from 'html-react-parser';
 import { I18nextProvider, useTranslation } from 'react-i18next';
 import { GithubLogo, Heart, List, MagnifyingGlass, Moon, Sun, X } from '@phosphor-icons/react';
 import type { ComponentType, ReactElement, ReactNode } from 'react';
-import { Fragment, useEffect, useMemo, useState } from 'react';
+import { Children, Fragment, isValidElement, useEffect, useMemo, useState } from 'react';
 import { Link, Route, Router, Switch, useLocation } from 'wouter';
 import { makeLocalizedPath, normalizeBaseURL, resolveLocalizedRoute } from './routing';
 import { createPageSearch, type SearchDocument } from './search';
 import { themeI18n } from './i18n';
 import { getProjectLinks } from './project-links';
 import '@mantine/core/styles.css';
+import '@mantine/code-highlight/styles.css';
 import '@mantine/spotlight/styles.css';
+
+const codeHighlightAdapter = createShikiAdapter(
+  () => createHighlighter({
+    themes: ['github-light', 'github-dark'],
+    langs: [
+      'bash',
+      'css',
+      'diff',
+      'html',
+      'javascript',
+      'json',
+      'jsx',
+      'markdown',
+      'mdx',
+      'shellscript',
+      'typescript',
+      'tsx',
+      'yaml',
+    ],
+  }),
+  {
+    resolveLanguage: (language) => {
+      const normalizedLanguage = language.toLowerCase();
+      return normalizedLanguage in bundledLanguages
+        ? bundledLanguages[normalizedLanguage as BundledLanguage]
+        : null;
+    },
+  },
+);
+
+interface MarkdownElementProps {
+  children?: ReactNode;
+  html?: string;
+}
+
+type MarkdownComponents = Record<string, ComponentType<MarkdownElementProps>>;
 
 export interface VitedPage {
   path: string;
   locale: string;
   title: string;
   frontmatter: Record<string, unknown>;
-  component: ComponentType;
+  component: ComponentType<{ components?: MarkdownComponents }>;
 }
 
 export interface VitedThemeProps {
@@ -92,6 +136,10 @@ function ThemeApp({
   const page = pages.find((item) => item.path === route.pathname && item.locale === locale) ??
     pages.find((item) => item.path === route.pathname);
   const localizedPages = getLocalizedPages(pages, locales);
+  const markdownComponents = useMemo<MarkdownComponents>(
+    () => ({ html: MarkdownHtml, pre: MarkdownCodeBlock }),
+    [],
+  );
   const searchPages = useMemo(
     () => searchIndex.filter((item) => item.locale.toLowerCase() === locale.toLowerCase()),
     [searchIndex, locale],
@@ -262,7 +310,7 @@ function ThemeApp({
               const Content = localizedPage.component;
               return (
                 <Route key={`${localizedPath}:${localizedPage.locale}`} path={localizedPath}>
-                  <Content />
+                  <Content components={markdownComponents} />
                 </Route>
               );
             })}
@@ -294,11 +342,13 @@ export function VitedTheme(props: VitedThemeProps): ReactElement {
   const normalizedBaseURL = normalizeBaseURL(props.baseURL ?? '/');
   return (
     <MantineProvider defaultColorScheme="auto">
-      <I18nextProvider i18n={themeI18n}>
-        <Router base={normalizedBaseURL === '/' ? '' : normalizedBaseURL}>
-          <ThemeApp {...props} />
-        </Router>
-      </I18nextProvider>
+      <CodeHighlightAdapterProvider adapter={codeHighlightAdapter}>
+        <I18nextProvider i18n={themeI18n}>
+          <Router base={normalizedBaseURL === '/' ? '' : normalizedBaseURL}>
+            <ThemeApp {...props} />
+          </Router>
+        </I18nextProvider>
+      </CodeHighlightAdapterProvider>
     </MantineProvider>
   );
 }
@@ -472,4 +522,63 @@ function getSearchShortcut(): string {
 
 function humanize(value: string): string {
   return decodeURIComponent(value).replace(/[-_]/g, ' ');
+}
+
+function MarkdownHtml({ html = '' }: MarkdownElementProps): ReactElement {
+  return (
+    <>
+      {parse(html, {
+        replace(node: DOMNode) {
+          if (!(node instanceof HtmlElement) || node.name !== 'pre') return;
+          const codeNode = node.children.find(
+            (child): child is HtmlElement =>
+              child instanceof HtmlElement && child.name === 'code',
+          );
+          if (!codeNode) return;
+          const code = codeNode.children.map(getHtmlText).join('');
+          return (
+            <MarkdownCodeBlock>
+              <code className={codeNode.attribs.class}>{code}</code>
+            </MarkdownCodeBlock>
+          );
+        },
+      })}
+    </>
+  );
+}
+
+function MarkdownCodeBlock({ children }: MarkdownElementProps): ReactElement {
+  const { t } = useTranslation();
+  const colorScheme = useComputedColorScheme('light', { getInitialValueInEffect: true });
+  const codeElement = Children.toArray(children).find(
+    (child): child is ReactElement<{ className?: string; children?: ReactNode }> =>
+      isValidElement(child) && child.type === 'code',
+  );
+  if (!codeElement) return <pre>{children}</pre>;
+
+  const language = codeElement.props.className?.match(/(?:^|\s)language-([\w+#.-]+)/)?.[1];
+  return (
+    <CodeHighlight
+      code={getReactText(codeElement.props.children)}
+      language={language}
+      codeColorScheme={colorScheme === 'dark' ? 'github-dark' : 'github-light'}
+      withBorder
+      radius="sm"
+      copyLabel={t('copy')}
+      copiedLabel={t('copied')}
+    />
+  );
+}
+
+function getHtmlText(node: DOMNode): string {
+  if (node.type === 'text') return node.data;
+  if (node instanceof HtmlElement) return node.children.map(getHtmlText).join('');
+  return '';
+}
+
+function getReactText(node: ReactNode): string {
+  if (typeof node === 'string' || typeof node === 'number') return String(node);
+  if (Array.isArray(node)) return node.map(getReactText).join('');
+  if (isValidElement<{ children?: ReactNode }>(node)) return getReactText(node.props.children);
+  return '';
 }

@@ -24,6 +24,8 @@ void themeI18n
           noSearchResults: 'No matching documents found',
           github: 'GitHub',
           donate: 'Donate',
+          copy: 'Copy',
+          copied: 'Copied',
           locales: {
             en: 'English',
             zh: '简体中文',
@@ -44,6 +46,8 @@ void themeI18n
           noSearchResults: '没有找到匹配的文档',
           github: 'GitHub',
           donate: '赞助',
+          copy: '复制',
+          copied: '已复制',
           locales: {
             en: 'English',
             zh: '简体中文',

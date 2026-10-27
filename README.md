@@ -9,7 +9,8 @@ locales are configured. These labels use `react-i18next` resources in
 provides locale-aware fuzzy search in a Mantine Spotlight, opened with the
 Search button or `Ctrl+K` / `⌘K`. GitHub and Donate links are shown in the
 header when the supplied `packageJSON` includes valid `repository` and
-`funding` URLs.
+`funding` URLs. Markdown and MDX fenced code blocks use Mantine CodeHighlight
+with Shiki syntax highlighting, copy controls, and translated copy labels.
 
 ```ts
 import { defineConfig } from '@vited/core';

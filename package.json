@@ -42,11 +42,14 @@
     "test:watch": "vitest"
   },
   "dependencies": {
+    "@mantine/code-highlight": "^9.7.4",
     "@mantine/spotlight": "^9.7.4",
     "@phosphor-icons/react": "^2.1.10",
     "fuse.js": "^7.5.0",
+    "html-react-parser": "^6.1.9",
     "i18next": "^26.5.11",
     "react-i18next": "^17.1.9",
+    "shiki": "^4.5.0",
     "wouter": "^3.13.0"
   },
   "peerDependencies": {
