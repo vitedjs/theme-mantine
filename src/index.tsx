@@ -1,11 +1,18 @@
 import {
-  Anchor,
+  ActionIcon,
+  AppShell,
+  Burger,
   Container,
+  Divider,
   Group,
   MantineProvider,
+  NavLink,
+  ScrollArea,
+  Select,
   Stack,
   Text,
-  Title,
+  useComputedColorScheme,
+  useMantineColorScheme,
 } from '@mantine/core';
 import type { ComponentType, ReactElement, ReactNode } from 'react';
 import { useEffect, useState } from 'react';
@@ -48,7 +55,7 @@ export function findPage(
     pages[0];
 }
 
-export function VitedTheme({
+function ThemeApp({
   pages,
   title = '',
   description = '',
@@ -58,14 +65,34 @@ export function VitedTheme({
 }: VitedThemeProps): ReactElement {
   const [pathname, setPathname] = useState(readPathname);
   const [locale, setLocale] = useState(readLocale(supportedLocales, pages));
+  const [mobileOpened, setMobileOpened] = useState(false);
+  const { setColorScheme } = useMantineColorScheme();
+  const colorScheme = useComputedColorScheme('light', { getInitialValueInEffect: true });
+  const copy = getCopy(locale);
   const page = findPage(pages, removeBase(pathname, baseURL), locale);
   const Content = page?.component;
   const locales = supportedLocales.length > 0
     ? supportedLocales
     : [...new Set(pages.map((item) => item.locale))];
   const navigation = menu?.length
-    ? <MenuItems entries={menu} baseURL={baseURL} locale={locale} />
-    : <PageNavigation pages={pages.filter((item) => item.locale === locale)} baseURL={baseURL} activePath={page?.path} locale={locale} />;
+    ? (
+      <MenuItems
+        entries={menu}
+        baseURL={baseURL}
+        locale={locale}
+        activePath={page?.path}
+        onNavigate={() => setMobileOpened(false)}
+      />
+    )
+    : (
+      <PageNavigation
+        pages={pages.filter((item) => item.locale === locale)}
+        baseURL={baseURL}
+        activePath={page?.path}
+        locale={locale}
+        onNavigate={() => setMobileOpened(false)}
+      />
+    );
 
   useEffect(() => {
     const updateLocation = () => {
@@ -76,7 +103,12 @@ export function VitedTheme({
     return () => window.removeEventListener('popstate', updateLocation);
   }, [pages, supportedLocales]);
 
-  function changeLocale(nextLocale: string) {
+  useEffect(() => {
+    document.documentElement.lang = locale;
+  }, [locale]);
+
+  function changeLocale(nextLocale: string | null) {
+    if (!nextLocale) return;
     setLocale(nextLocale);
     const query = new URLSearchParams(window.location.search);
     query.set('lang', nextLocale);
@@ -84,32 +116,80 @@ export function VitedTheme({
   }
 
   return (
-    <MantineProvider>
-      <Container size="xl" py="xl">
-        <Group justify="space-between" align="flex-start" mb="xl">
-          <div>
-            <Title order={1}>{title || page?.title || 'Documentation'}</Title>
-            {description ? <Text c="dimmed">{description}</Text> : null}
-          </div>
-          {locales.length > 1 ? (
-            <select
-              aria-label="Language"
-              value={locale}
-              onChange={(event) => changeLocale(event.currentTarget.value)}
+    <AppShell
+      header={{ height: 64 }}
+      navbar={{
+        width: 280,
+        breakpoint: 'sm',
+        collapsed: { mobile: !mobileOpened },
+      }}
+      padding="md"
+    >
+      <AppShell.Header>
+        <Group h="100%" px="md" justify="space-between" wrap="nowrap">
+          <Group gap="sm" wrap="nowrap">
+            <Burger
+              opened={mobileOpened}
+              onClick={() => setMobileOpened((opened) => !opened)}
+              hiddenFrom="sm"
+              size="sm"
+              aria-label={mobileOpened ? copy.closeNavigation : copy.openNavigation}
+            />
+            <Stack gap={0}>
+              <Text fw={700} lineClamp={1}>{title || 'Documentation'}</Text>
+              {description ? (
+                <Text c="dimmed" size="xs" lineClamp={1} visibleFrom="sm">{description}</Text>
+              ) : null}
+            </Stack>
+          </Group>
+          <Group gap="xs" wrap="nowrap">
+            {locales.length > 1 ? (
+              <Select
+                aria-label={copy.language}
+                data={locales.map((item) => ({ value: item, label: getLocaleName(item) }))}
+                value={locale}
+                onChange={changeLocale}
+                allowDeselect={false}
+                w={120}
+                size="sm"
+              />
+            ) : null}
+            <ActionIcon
+              variant="default"
+              size="lg"
+              aria-label={colorScheme === 'dark' ? copy.switchToLight : copy.switchToDark}
+              onClick={() => setColorScheme(colorScheme === 'dark' ? 'light' : 'dark')}
             >
-              {locales.map((item) => <option key={item} value={item}>{item}</option>)}
-            </select>
-          ) : null}
+              <span aria-hidden="true">{colorScheme === 'dark' ? '☀' : '☾'}</span>
+            </ActionIcon>
+          </Group>
         </Group>
-        <Group align="flex-start" wrap="nowrap">
-          <Stack component="nav" gap="xs" miw={220}>{navigation}</Stack>
-          <main>
-            {Content
-              ? <Content />
-              : <Text c="dimmed">No documents were found in the configured docs directory.</Text>}
-          </main>
-        </Group>
-      </Container>
+      </AppShell.Header>
+      <AppShell.Navbar p="md">
+        <AppShell.Section mb="sm">
+          <Text size="sm" fw={600} c="dimmed">{copy.navigation}</Text>
+        </AppShell.Section>
+        <AppShell.Section grow component={ScrollArea}>
+          <Stack component="nav" gap={4} aria-label={copy.navigation}>
+            {navigation}
+          </Stack>
+        </AppShell.Section>
+      </AppShell.Navbar>
+      <AppShell.Main>
+        <Container size="lg" py="md">
+          {Content
+            ? <Content />
+            : <Text c="dimmed">{copy.noDocuments}</Text>}
+        </Container>
+      </AppShell.Main>
+    </AppShell>
+  );
+}
+
+export function VitedTheme(props: VitedThemeProps): ReactElement {
+  return (
+    <MantineProvider defaultColorScheme="auto">
+      <ThemeApp {...props} />
     </MantineProvider>
   );
 }
@@ -123,17 +203,20 @@ interface PageNavigationNode {
   children: PageNavigationNode[];
 }
 
+interface NavigationProps {
+  baseURL: string;
+  locale: string;
+  activePath?: string;
+  onNavigate: () => void;
+}
+
 function PageNavigation({
   pages,
   baseURL,
   activePath,
   locale,
-}: {
-  pages: VitedPage[];
-  baseURL: string;
-  activePath?: string;
-  locale: string;
-}): ReactElement {
+  onNavigate,
+}: NavigationProps & { pages: VitedPage[] }): ReactElement {
   const nodes: PageNavigationNode[] = [];
 
   for (const page of pages) {
@@ -160,31 +243,28 @@ function PageNavigation({
     }
   }
 
-  return <>{renderPageNavigationNodes(nodes, baseURL, activePath, locale)}</>;
+  return <>{renderPageNavigationNodes(nodes, { baseURL, locale, activePath, onNavigate })}</>;
 }
 
 function renderPageNavigationNodes(
   nodes: PageNavigationNode[],
-  baseURL: string,
-  activePath: string | undefined,
-  locale: string,
+  props: NavigationProps,
 ): ReactNode {
   return nodes.map((node) => (
-        <div key={node.key}>
-          {node.page ? (
-            <Anchor
-              href={makeHref(baseURL, node.page.path, locale)}
-              fw={node.page.path === activePath ? 700 : 400}
-            >
-              {node.title}
-            </Anchor>
-          ) : <Text fw={600}>{node.title}</Text>}
-          {node.children.length > 0
-            ? <Stack gap="xs" pl="md">
-                {renderPageNavigationNodes(node.children, baseURL, activePath, locale)}
-              </Stack>
-            : null}
-        </div>
+    <NavLink
+      key={node.key}
+      label={node.title}
+      href={node.page ? makeHref(props.baseURL, node.page.path, props.locale) : undefined}
+      active={node.page?.path === props.activePath}
+      defaultOpened={node.children.some((child) =>
+        child.page?.path === props.activePath || props.activePath?.startsWith(`${child.key}/`)
+      )}
+      onClick={node.page ? props.onNavigate : undefined}
+    >
+      {node.children.length > 0
+        ? renderPageNavigationNodes(node.children, props)
+        : null}
+    </NavLink>
   ));
 }
 
@@ -192,25 +272,36 @@ function MenuItems({
   entries,
   baseURL,
   locale,
-}: {
-  entries: VitedMenuEntry[];
-  baseURL: string;
-  locale: string;
-}): ReactElement {
+  activePath,
+  onNavigate,
+}: NavigationProps & { entries: VitedMenuEntry[] }): ReactElement {
   return (
     <>
       {entries.map((entry, index) => {
-        if (entry.divider) return <hr key={`divider-${index}`} />;
+        if (entry.divider) return <Divider key={`divider-${index}`} my="xs" />;
         const href = entry.path
           ? makeHref(baseURL, entry.path, locale)
           : entry.link ?? '#';
+        const label = entry.text ?? entry.file ?? entry.path ?? entry.link ?? '';
         return (
-          <div key={`${href}:${index}`}>
-            <Anchor href={href}>{entry.text ?? entry.file ?? entry.path ?? entry.link}</Anchor>
+          <NavLink
+            key={`${href}:${index}`}
+            label={label}
+            href={href}
+            active={entry.path === activePath}
+            defaultOpened={Boolean(entry.children?.length)}
+            onClick={onNavigate}
+          >
             {entry.children?.length
-              ? <Stack gap="xs" pl="md"><MenuItems entries={entry.children} baseURL={baseURL} locale={locale} /></Stack>
+              ? <MenuItems
+                  entries={entry.children}
+                  baseURL={baseURL}
+                  locale={locale}
+                  activePath={activePath}
+                  onNavigate={onNavigate}
+                />
               : null}
-          </div>
+          </NavLink>
         );
       })}
     </>
@@ -224,9 +315,47 @@ function readPathname(): string {
 function readLocale(locales: string[], pages: VitedPage[]): string {
   if (typeof window !== 'undefined') {
     const requested = new URLSearchParams(window.location.search).get('lang');
-    if (requested && (locales.length === 0 || locales.includes(requested))) return requested;
+    const match = requested && locales.find((locale) => locale.toLowerCase() === requested.toLowerCase());
+    if (match) return match;
   }
   return locales[0] ?? pages[0]?.locale ?? 'en';
+}
+
+function getLocaleName(locale: string): string {
+  if (locale.toLowerCase().startsWith('zh')) return '简体中文';
+  if (locale.toLowerCase().startsWith('en')) return 'English';
+  return locale;
+}
+
+function getCopy(locale: string): {
+  language: string;
+  navigation: string;
+  noDocuments: string;
+  openNavigation: string;
+  closeNavigation: string;
+  switchToLight: string;
+  switchToDark: string;
+} {
+  if (locale.toLowerCase().startsWith('zh')) {
+    return {
+      language: '语言',
+      navigation: '导航',
+      noDocuments: '在配置的文档目录中没有找到文档。',
+      openNavigation: '打开导航',
+      closeNavigation: '关闭导航',
+      switchToLight: '切换到浅色模式',
+      switchToDark: '切换到深色模式',
+    };
+  }
+  return {
+    language: 'Language',
+    navigation: 'Navigation',
+    noDocuments: 'No documents were found in the configured docs directory.',
+    openNavigation: 'Open navigation',
+    closeNavigation: 'Close navigation',
+    switchToLight: 'Switch to light mode',
+    switchToDark: 'Switch to dark mode',
+  };
 }
 
 function removeBase(pathname: string, baseURL: string): string {
