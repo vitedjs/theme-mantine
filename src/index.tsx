@@ -1,7 +1,6 @@
 import {
   ActionIcon,
   AppShell,
-  Burger,
   Container,
   Divider,
   Group,
@@ -14,8 +13,10 @@ import {
   useComputedColorScheme,
   useMantineColorScheme,
 } from '@mantine/core';
+import { List, Moon, Sun, X } from '@phosphor-icons/react';
 import type { ComponentType, ReactElement, ReactNode } from 'react';
 import { useEffect, useState } from 'react';
+import { makeLocalizedPath, resolveLocalizedRoute } from './routing';
 import '@mantine/core/styles.css';
 
 export interface VitedPage {
@@ -63,22 +64,26 @@ function ThemeApp({
   baseURL = '/',
   menu,
 }: VitedThemeProps): ReactElement {
+  const locales = supportedLocales.length > 0
+    ? supportedLocales
+    : [...new Set(pages.map((item) => item.locale))];
   const [pathname, setPathname] = useState(readPathname);
-  const [locale, setLocale] = useState(readLocale(supportedLocales, pages));
+  const [locale, setLocale] = useState(
+    () => resolveLocalizedRoute(readPathname(), locales, baseURL).locale,
+  );
   const [mobileOpened, setMobileOpened] = useState(false);
   const { setColorScheme } = useMantineColorScheme();
   const colorScheme = useComputedColorScheme('light', { getInitialValueInEffect: true });
   const copy = getCopy(locale);
-  const page = findPage(pages, removeBase(pathname, baseURL), locale);
+  const route = resolveLocalizedRoute(pathname, locales, baseURL);
+  const page = findPage(pages, route.pathname, locale);
   const Content = page?.component;
-  const locales = supportedLocales.length > 0
-    ? supportedLocales
-    : [...new Set(pages.map((item) => item.locale))];
   const navigation = menu?.length
     ? (
       <MenuItems
         entries={menu}
         baseURL={baseURL}
+        locales={locales}
         locale={locale}
         activePath={page?.path}
         onNavigate={() => setMobileOpened(false)}
@@ -88,6 +93,7 @@ function ThemeApp({
       <PageNavigation
         pages={pages.filter((item) => item.locale === locale)}
         baseURL={baseURL}
+        locales={locales}
         activePath={page?.path}
         locale={locale}
         onNavigate={() => setMobileOpened(false)}
@@ -97,11 +103,11 @@ function ThemeApp({
   useEffect(() => {
     const updateLocation = () => {
       setPathname(readPathname());
-      setLocale(readLocale(supportedLocales, pages));
+      setLocale(resolveLocalizedRoute(readPathname(), locales, baseURL).locale);
     };
     window.addEventListener('popstate', updateLocation);
     return () => window.removeEventListener('popstate', updateLocation);
-  }, [pages, supportedLocales]);
+  }, [baseURL, locales]);
 
   useEffect(() => {
     document.documentElement.lang = locale;
@@ -110,9 +116,12 @@ function ThemeApp({
   function changeLocale(nextLocale: string | null) {
     if (!nextLocale) return;
     setLocale(nextLocale);
-    const query = new URLSearchParams(window.location.search);
-    query.set('lang', nextLocale);
-    window.history.pushState(null, '', `${window.location.pathname}?${query}${window.location.hash}`);
+    const localizedPath = makeLocalizedPath(baseURL, route.pathname, nextLocale, locales);
+    const url = new URL(window.location.href);
+    url.pathname = localizedPath;
+    url.searchParams.delete('lang');
+    window.history.pushState(null, '', `${url.pathname}${url.search}${url.hash}`);
+    setPathname(localizedPath);
   }
 
   return (
@@ -128,13 +137,15 @@ function ThemeApp({
       <AppShell.Header>
         <Group h="100%" px="md" justify="space-between" wrap="nowrap">
           <Group gap="sm" wrap="nowrap">
-            <Burger
-              opened={mobileOpened}
-              onClick={() => setMobileOpened((opened) => !opened)}
+            <ActionIcon
+              variant="subtle"
+              size="lg"
               hiddenFrom="sm"
-              size="sm"
               aria-label={mobileOpened ? copy.closeNavigation : copy.openNavigation}
-            />
+              onClick={() => setMobileOpened((opened) => !opened)}
+            >
+              {mobileOpened ? <X size={20} /> : <List size={20} />}
+            </ActionIcon>
             <Stack gap={0}>
               <Text fw={700} lineClamp={1}>{title || 'Documentation'}</Text>
               {description ? (
@@ -160,7 +171,7 @@ function ThemeApp({
               aria-label={colorScheme === 'dark' ? copy.switchToLight : copy.switchToDark}
               onClick={() => setColorScheme(colorScheme === 'dark' ? 'light' : 'dark')}
             >
-              <span aria-hidden="true">{colorScheme === 'dark' ? '☀' : '☾'}</span>
+              {colorScheme === 'dark' ? <Sun size={20} /> : <Moon size={20} />}
             </ActionIcon>
           </Group>
         </Group>
@@ -205,6 +216,7 @@ interface PageNavigationNode {
 
 interface NavigationProps {
   baseURL: string;
+  locales: string[];
   locale: string;
   activePath?: string;
   onNavigate: () => void;
@@ -213,6 +225,7 @@ interface NavigationProps {
 function PageNavigation({
   pages,
   baseURL,
+  locales,
   activePath,
   locale,
   onNavigate,
@@ -243,7 +256,7 @@ function PageNavigation({
     }
   }
 
-  return <>{renderPageNavigationNodes(nodes, { baseURL, locale, activePath, onNavigate })}</>;
+  return <>{renderPageNavigationNodes(nodes, { baseURL, locales, locale, activePath, onNavigate })}</>;
 }
 
 function renderPageNavigationNodes(
@@ -254,7 +267,9 @@ function renderPageNavigationNodes(
     <NavLink
       key={node.key}
       label={node.title}
-      href={node.page ? makeHref(props.baseURL, node.page.path, props.locale) : undefined}
+      href={node.page
+        ? makeLocalizedPath(props.baseURL, node.page.path, props.locale, props.locales)
+        : undefined}
       active={node.page?.path === props.activePath}
       defaultOpened={node.children.some((child) =>
         child.page?.path === props.activePath || props.activePath?.startsWith(`${child.key}/`)
@@ -271,6 +286,7 @@ function renderPageNavigationNodes(
 function MenuItems({
   entries,
   baseURL,
+  locales,
   locale,
   activePath,
   onNavigate,
@@ -280,7 +296,7 @@ function MenuItems({
       {entries.map((entry, index) => {
         if (entry.divider) return <Divider key={`divider-${index}`} my="xs" />;
         const href = entry.path
-          ? makeHref(baseURL, entry.path, locale)
+          ? makeLocalizedPath(baseURL, entry.path, locale, locales)
           : entry.link ?? '#';
         const label = entry.text ?? entry.file ?? entry.path ?? entry.link ?? '';
         return (
@@ -296,6 +312,7 @@ function MenuItems({
               ? <MenuItems
                   entries={entry.children}
                   baseURL={baseURL}
+                  locales={locales}
                   locale={locale}
                   activePath={activePath}
                   onNavigate={onNavigate}
@@ -310,15 +327,6 @@ function MenuItems({
 
 function readPathname(): string {
   return typeof window === 'undefined' ? '/' : window.location.pathname;
-}
-
-function readLocale(locales: string[], pages: VitedPage[]): string {
-  if (typeof window !== 'undefined') {
-    const requested = new URLSearchParams(window.location.search).get('lang');
-    const match = requested && locales.find((locale) => locale.toLowerCase() === requested.toLowerCase());
-    if (match) return match;
-  }
-  return locales[0] ?? pages[0]?.locale ?? 'en';
 }
 
 function getLocaleName(locale: string): string {
@@ -356,20 +364,6 @@ function getCopy(locale: string): {
     switchToLight: 'Switch to light mode',
     switchToDark: 'Switch to dark mode',
   };
-}
-
-function removeBase(pathname: string, baseURL: string): string {
-  const base = `/${baseURL.split('/').filter(Boolean).join('/')}`;
-  if (base === '/') return pathname;
-  if (pathname === base) return '/';
-  if (!pathname.startsWith(`${base}/`)) return pathname;
-  return pathname.slice(base.length) || '/';
-}
-
-function makeHref(baseURL: string, route: string, locale: string): string {
-  const base = `/${baseURL.split('/').filter(Boolean).join('/')}`;
-  const prefix = base === '/' ? '' : base;
-  return `${prefix}${route === '/' ? '/' : route}?lang=${encodeURIComponent(locale)}`;
 }
 
 function humanize(value: string): string {

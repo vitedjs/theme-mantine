@@ -2,9 +2,9 @@
 
 The default Mantine theme for Vited. It renders generated document pages,
 provides responsive navigation in a Mantine AppShell, and includes a persisted
-light/dark theme toggle. Interface labels are available in English and
-Simplified Chinese; the language selector appears when multiple locales are
-configured.
+light/dark theme toggle with Phosphor icons. Interface labels are available in
+English and Simplified Chinese; the language selector appears when multiple
+locales are configured.
 
 ```ts
 import { defineConfig } from '@vited/core';
