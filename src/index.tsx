@@ -16,12 +16,14 @@ import {
   useMantineColorScheme,
 } from '@mantine/core';
 import { Spotlight, type SpotlightActionData } from '@mantine/spotlight';
+import { I18nextProvider, useTranslation } from 'react-i18next';
 import { List, MagnifyingGlass, Moon, Sun, X } from '@phosphor-icons/react';
 import type { ComponentType, ReactElement, ReactNode } from 'react';
 import { Fragment, useEffect, useMemo, useState } from 'react';
 import { Link, Route, Router, Switch, useLocation } from 'wouter';
 import { makeLocalizedPath, normalizeBaseURL, resolveLocalizedRoute } from './routing';
 import { createPageSearch, type SearchDocument } from './search';
+import { themeI18n } from './i18n';
 import '@mantine/core/styles.css';
 import '@mantine/spotlight/styles.css';
 
@@ -78,10 +80,10 @@ function ThemeApp({
   const [pathname, navigate] = useLocation();
   const route = resolveLocalizedRoute(pathname, locales);
   const locale = route.locale;
+  const { t, i18n } = useTranslation();
   const [mobileOpened, setMobileOpened] = useState(false);
   const { setColorScheme } = useMantineColorScheme();
   const colorScheme = useComputedColorScheme('light', { getInitialValueInEffect: true });
-  const copy = getCopy(locale);
   const page = pages.find((item) => item.path === route.pathname && item.locale === locale) ??
     pages.find((item) => item.path === route.pathname);
   const localizedPages = getLocalizedPages(pages, locales);
@@ -126,7 +128,8 @@ function ThemeApp({
 
   useEffect(() => {
     document.documentElement.lang = locale;
-  }, [locale]);
+    void i18n.changeLanguage(locale);
+  }, [i18n, locale]);
 
   function changeLocale(nextLocale: string | null) {
     if (!nextLocale) return;
@@ -153,7 +156,7 @@ function ThemeApp({
               variant="subtle"
               size="lg"
               hiddenFrom="sm"
-              aria-label={mobileOpened ? copy.closeNavigation : copy.openNavigation}
+              aria-label={mobileOpened ? t('closeNavigation') : t('openNavigation')}
               onClick={() => setMobileOpened((opened) => !opened)}
             >
               {mobileOpened ? <X size={20} /> : <List size={20} />}
@@ -176,16 +179,19 @@ function ThemeApp({
                 w={{ base: 180, sm: 250 }}
                 c="dimmed"
                 fw={400}
-                aria-label={`${copy.search} ${getSearchShortcut()}`}
+                aria-label={`${t('search')} ${getSearchShortcut()}`}
                 onClick={() => Spotlight.open()}
               >
-                <Text size="sm">{copy.search}</Text>
+                <Text size="sm">{t('search')}</Text>
               </Button>
             ) : null}
             {locales.length > 1 ? (
               <Select
-                aria-label={copy.language}
-                data={locales.map((item) => ({ value: item, label: getLocaleName(item) }))}
+                aria-label={t('language')}
+                data={locales.map((item) => ({
+                  value: item,
+                  label: t(`locales.${item}`, { defaultValue: item }),
+                }))}
                 value={locale}
                 onChange={changeLocale}
                 allowDeselect={false}
@@ -196,7 +202,7 @@ function ThemeApp({
             <ActionIcon
               variant="default"
               size="lg"
-              aria-label={colorScheme === 'dark' ? copy.switchToLight : copy.switchToDark}
+              aria-label={colorScheme === 'dark' ? t('switchToLight') : t('switchToDark')}
               onClick={() => setColorScheme(colorScheme === 'dark' ? 'light' : 'dark')}
             >
               {colorScheme === 'dark' ? <Sun size={20} /> : <Moon size={20} />}
@@ -206,10 +212,10 @@ function ThemeApp({
       </AppShell.Header>
       <AppShell.Navbar p="md">
         <AppShell.Section mb="sm">
-          <Text size="sm" fw={600} c="dimmed">{copy.navigation}</Text>
+          <Text size="sm" fw={600} c="dimmed">{t('navigation')}</Text>
         </AppShell.Section>
         <AppShell.Section grow component={ScrollArea}>
-          <Stack component="nav" gap={4} aria-label={copy.navigation}>
+          <Stack component="nav" gap={4} aria-label={t('navigation')}>
             {navigation}
           </Stack>
         </AppShell.Section>
@@ -226,7 +232,7 @@ function ThemeApp({
               );
             })}
             <Route>
-              <Text c="dimmed">{copy.noDocuments}</Text>
+              <Text c="dimmed">{t('noDocuments')}</Text>
             </Route>
           </Switch>
         </Container>
@@ -238,8 +244,8 @@ function ThemeApp({
             const action = searchActionsById.get(`${item.locale}:${item.path}`);
             return action ? [action] : [];
           })}
-          nothingFound={copy.noSearchResults}
-          searchProps={{ placeholder: copy.searchPlaceholder }}
+          nothingFound={t('noSearchResults')}
+          searchProps={{ placeholder: t('searchPlaceholder') }}
           shortcut="mod + K"
           highlightQuery
           limit={8}
@@ -253,9 +259,11 @@ export function VitedTheme(props: VitedThemeProps): ReactElement {
   const normalizedBaseURL = normalizeBaseURL(props.baseURL ?? '/');
   return (
     <MantineProvider defaultColorScheme="auto">
-      <Router base={normalizedBaseURL === '/' ? '' : normalizedBaseURL}>
-        <ThemeApp {...props} />
-      </Router>
+      <I18nextProvider i18n={themeI18n}>
+        <Router base={normalizedBaseURL === '/' ? '' : normalizedBaseURL}>
+          <ThemeApp {...props} />
+        </Router>
+      </I18nextProvider>
     </MantineProvider>
   );
 }
@@ -421,56 +429,10 @@ function getLocalizedPages(
   return routes;
 }
 
-function getLocaleName(locale: string): string {
-  if (locale.toLowerCase().startsWith('zh')) return '简体中文';
-  if (locale.toLowerCase().startsWith('en')) return 'English';
-  return locale;
-}
-
 function getSearchShortcut(): string {
   return typeof navigator !== 'undefined' && /Mac|iPhone|iPad|iPod/.test(navigator.platform)
     ? '⌘ K'
     : 'Ctrl + K';
-}
-
-function getCopy(locale: string): {
-  language: string;
-  navigation: string;
-  noDocuments: string;
-  openNavigation: string;
-  closeNavigation: string;
-  switchToLight: string;
-  switchToDark: string;
-  search: string;
-  searchPlaceholder: string;
-  noSearchResults: string;
-} {
-  if (locale.toLowerCase().startsWith('zh')) {
-    return {
-      language: '语言',
-      navigation: '导航',
-      noDocuments: '在配置的文档目录中没有找到文档。',
-      openNavigation: '打开导航',
-      closeNavigation: '关闭导航',
-      switchToLight: '切换到浅色模式',
-      switchToDark: '切换到深色模式',
-      search: '搜索',
-      searchPlaceholder: '搜索文档',
-      noSearchResults: '没有找到匹配的文档',
-    };
-  }
-  return {
-    language: 'Language',
-    navigation: 'Navigation',
-    noDocuments: 'No documents were found in the configured docs directory.',
-    openNavigation: 'Open navigation',
-    closeNavigation: 'Close navigation',
-    switchToLight: 'Switch to light mode',
-    switchToDark: 'Switch to dark mode',
-    search: 'Search',
-    searchPlaceholder: 'Search documentation',
-    noSearchResults: 'No matching documents found',
-  };
 }
 
 function humanize(value: string): string {
