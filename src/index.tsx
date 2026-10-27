@@ -1,9 +1,11 @@
 import {
   ActionIcon,
   AppShell,
+  Button,
   Container,
   Divider,
   Group,
+  Kbd,
   MantineProvider,
   NavLink,
   ScrollArea,
@@ -13,12 +15,15 @@ import {
   useComputedColorScheme,
   useMantineColorScheme,
 } from '@mantine/core';
-import { List, Moon, Sun, X } from '@phosphor-icons/react';
+import { Spotlight, type SpotlightActionData } from '@mantine/spotlight';
+import { List, MagnifyingGlass, Moon, Sun, X } from '@phosphor-icons/react';
 import type { ComponentType, ReactElement, ReactNode } from 'react';
-import { Fragment, useEffect, useState } from 'react';
+import { Fragment, useEffect, useMemo, useState } from 'react';
 import { Link, Route, Router, Switch, useLocation } from 'wouter';
 import { makeLocalizedPath, normalizeBaseURL, resolveLocalizedRoute } from './routing';
+import { createPageSearch, type SearchDocument } from './search';
 import '@mantine/core/styles.css';
+import '@mantine/spotlight/styles.css';
 
 export interface VitedPage {
   path: string;
@@ -35,6 +40,7 @@ export interface VitedThemeProps {
   supportedLocales?: string[];
   baseURL?: string;
   menu?: VitedMenuEntry[] | null;
+  searchIndex?: SearchDocument[];
 }
 
 export interface VitedMenuEntry {
@@ -64,6 +70,7 @@ function ThemeApp({
   supportedLocales = [],
   baseURL = '/',
   menu,
+  searchIndex = [],
 }: VitedThemeProps): ReactElement {
   const locales = supportedLocales.length > 0
     ? supportedLocales
@@ -78,6 +85,25 @@ function ThemeApp({
   const page = pages.find((item) => item.path === route.pathname && item.locale === locale) ??
     pages.find((item) => item.path === route.pathname);
   const localizedPages = getLocalizedPages(pages, locales);
+  const searchPages = useMemo(
+    () => searchIndex.filter((item) => item.locale.toLowerCase() === locale.toLowerCase()),
+    [searchIndex, locale],
+  );
+  const search = useMemo(() => createPageSearch(searchPages), [searchPages]);
+  const searchActions = useMemo<SpotlightActionData[]>(() => searchPages.map((item) => ({
+    id: `${item.locale}:${item.path}`,
+    label: item.title,
+    description: item.content.slice(0, 140),
+    keywords: item.content,
+    onClick: () => {
+      navigate(makeLocalizedPath('/', item.path, locale, locales));
+      setMobileOpened(false);
+    },
+  })), [searchPages, navigate, locale, locales]);
+  const searchActionsById = useMemo(
+    () => new Map(searchActions.map((action) => [action.id, action])),
+    [searchActions],
+  );
   const navigation = menu?.length
     ? (
       <MenuItems
@@ -140,6 +166,22 @@ function ThemeApp({
             </Stack>
           </Group>
           <Group gap="xs" wrap="nowrap">
+            {searchIndex.length > 0 ? (
+              <Button
+                variant="default"
+                size="sm"
+                leftSection={<MagnifyingGlass size={16} />}
+                rightSection={<Kbd size="xs">{getSearchShortcut()}</Kbd>}
+                justify="space-between"
+                w={{ base: 180, sm: 250 }}
+                c="dimmed"
+                fw={400}
+                aria-label={`${copy.search} ${getSearchShortcut()}`}
+                onClick={() => Spotlight.open()}
+              >
+                <Text size="sm">{copy.search}</Text>
+              </Button>
+            ) : null}
             {locales.length > 1 ? (
               <Select
                 aria-label={copy.language}
@@ -189,6 +231,20 @@ function ThemeApp({
           </Switch>
         </Container>
       </AppShell.Main>
+      {searchIndex.length > 0 ? (
+        <Spotlight
+          actions={searchActions}
+          filter={(query) => search(query).flatMap((item) => {
+            const action = searchActionsById.get(`${item.locale}:${item.path}`);
+            return action ? [action] : [];
+          })}
+          nothingFound={copy.noSearchResults}
+          searchProps={{ placeholder: copy.searchPlaceholder }}
+          shortcut="mod + K"
+          highlightQuery
+          limit={8}
+        />
+      ) : null}
     </AppShell>
   );
 }
@@ -371,6 +427,12 @@ function getLocaleName(locale: string): string {
   return locale;
 }
 
+function getSearchShortcut(): string {
+  return typeof navigator !== 'undefined' && /Mac|iPhone|iPad|iPod/.test(navigator.platform)
+    ? '⌘ K'
+    : 'Ctrl + K';
+}
+
 function getCopy(locale: string): {
   language: string;
   navigation: string;
@@ -379,6 +441,9 @@ function getCopy(locale: string): {
   closeNavigation: string;
   switchToLight: string;
   switchToDark: string;
+  search: string;
+  searchPlaceholder: string;
+  noSearchResults: string;
 } {
   if (locale.toLowerCase().startsWith('zh')) {
     return {
@@ -389,6 +454,9 @@ function getCopy(locale: string): {
       closeNavigation: '关闭导航',
       switchToLight: '切换到浅色模式',
       switchToDark: '切换到深色模式',
+      search: '搜索',
+      searchPlaceholder: '搜索文档',
+      noSearchResults: '没有找到匹配的文档',
     };
   }
   return {
@@ -399,6 +467,9 @@ function getCopy(locale: string): {
     closeNavigation: 'Close navigation',
     switchToLight: 'Switch to light mode',
     switchToDark: 'Switch to dark mode',
+    search: 'Search',
+    searchPlaceholder: 'Search documentation',
+    noSearchResults: 'No matching documents found',
   };
 }
 

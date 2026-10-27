@@ -42,7 +42,9 @@
     "test:watch": "vitest"
   },
   "dependencies": {
+    "@mantine/spotlight": "^9.7.4",
     "@phosphor-icons/react": "^2.1.10",
+    "fuse.js": "^7.5.0",
     "wouter": "^3.13.0"
   },
   "peerDependencies": {
