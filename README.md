@@ -17,7 +17,6 @@ import { defineConfig } from '@vited/core';
 
 export default defineConfig({
   docs: {
-    root: './docs',
     title: 'My Cool Library',
     supportedLocales: ['en', 'zh'],
     theme: '@vited/theme-mantine',
