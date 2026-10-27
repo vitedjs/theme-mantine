@@ -22,6 +22,8 @@ void themeI18n
           search: 'Search',
           searchPlaceholder: 'Search documentation',
           noSearchResults: 'No matching documents found',
+          github: 'GitHub',
+          donate: 'Donate',
           locales: {
             en: 'English',
             zh: '简体中文',
@@ -40,6 +42,8 @@ void themeI18n
           search: '搜索',
           searchPlaceholder: '搜索文档',
           noSearchResults: '没有找到匹配的文档',
+          github: 'GitHub',
+          donate: '赞助',
           locales: {
             en: 'English',
             zh: '简体中文',

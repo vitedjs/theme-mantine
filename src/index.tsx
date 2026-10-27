@@ -12,18 +12,20 @@ import {
   Select,
   Stack,
   Text,
+  Tooltip,
   useComputedColorScheme,
   useMantineColorScheme,
 } from '@mantine/core';
 import { Spotlight, type SpotlightActionData } from '@mantine/spotlight';
 import { I18nextProvider, useTranslation } from 'react-i18next';
-import { List, MagnifyingGlass, Moon, Sun, X } from '@phosphor-icons/react';
+import { GithubLogo, Heart, List, MagnifyingGlass, Moon, Sun, X } from '@phosphor-icons/react';
 import type { ComponentType, ReactElement, ReactNode } from 'react';
 import { Fragment, useEffect, useMemo, useState } from 'react';
 import { Link, Route, Router, Switch, useLocation } from 'wouter';
 import { makeLocalizedPath, normalizeBaseURL, resolveLocalizedRoute } from './routing';
 import { createPageSearch, type SearchDocument } from './search';
 import { themeI18n } from './i18n';
+import { getProjectLinks } from './project-links';
 import '@mantine/core/styles.css';
 import '@mantine/spotlight/styles.css';
 
@@ -43,6 +45,7 @@ export interface VitedThemeProps {
   baseURL?: string;
   menu?: VitedMenuEntry[] | null;
   searchIndex?: SearchDocument[];
+  packageJSON?: Record<string, unknown>;
 }
 
 export interface VitedMenuEntry {
@@ -73,6 +76,7 @@ function ThemeApp({
   baseURL = '/',
   menu,
   searchIndex = [],
+  packageJSON = {},
 }: VitedThemeProps): ReactElement {
   const locales = supportedLocales.length > 0
     ? supportedLocales
@@ -84,6 +88,7 @@ function ThemeApp({
   const [mobileOpened, setMobileOpened] = useState(false);
   const { setColorScheme } = useMantineColorScheme();
   const colorScheme = useComputedColorScheme('light', { getInitialValueInEffect: true });
+  const projectLinks = useMemo(() => getProjectLinks(packageJSON), [packageJSON]);
   const page = pages.find((item) => item.path === route.pathname && item.locale === locale) ??
     pages.find((item) => item.path === route.pathname);
   const localizedPages = getLocalizedPages(pages, locales);
@@ -184,6 +189,36 @@ function ThemeApp({
               >
                 <Text size="sm">{t('search')}</Text>
               </Button>
+            ) : null}
+            {projectLinks.github ? (
+              <Tooltip label={t('github')} withArrow>
+                <ActionIcon
+                  component="a"
+                  href={projectLinks.github}
+                  target="_blank"
+                  rel="noreferrer"
+                  variant="default"
+                  size="lg"
+                  aria-label={t('github')}
+                >
+                  <GithubLogo size={20} />
+                </ActionIcon>
+              </Tooltip>
+            ) : null}
+            {projectLinks.funding ? (
+              <Tooltip label={t('donate')} withArrow>
+                <ActionIcon
+                  component="a"
+                  href={projectLinks.funding}
+                  target="_blank"
+                  rel="noreferrer"
+                  variant="default"
+                  size="lg"
+                  aria-label={t('donate')}
+                >
+                  <Heart size={20} color="red" />
+                </ActionIcon>
+              </Tooltip>
             ) : null}
             {locales.length > 1 ? (
               <Select
