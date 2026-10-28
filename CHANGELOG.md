@@ -1,5 +1,11 @@
 # Changelog
 
+## Unreleased
+
+### Changed
+
+- Require React 19.2 or newer to match Mantine 9's peer requirements.
+
 ## 0.1.0 - 2026-10-27
 
 Initial release.
