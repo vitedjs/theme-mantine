@@ -11,11 +11,12 @@ export function getProjectLinks(packageJSON: Record<string, unknown> = {}): Proj
 }
 
 function getGitHubRepositoryUrl(repository: unknown): string | undefined {
-  const repositoryUrl = typeof repository === 'string'
-    ? repository
-    : isRecord(repository) && typeof repository.url === 'string'
-    ? repository.url
-    : undefined;
+  const repositoryUrl =
+    typeof repository === 'string'
+      ? repository
+      : isRecord(repository) && typeof repository.url === 'string'
+        ? repository.url
+        : undefined;
   if (!repositoryUrl) return undefined;
 
   let normalized = repositoryUrl.trim().replace(/^git\+/, '');
@@ -45,11 +46,12 @@ function getFundingUrl(funding: unknown): string | undefined {
     return undefined;
   }
 
-  const value = typeof funding === 'string'
-    ? funding
-    : isRecord(funding) && typeof funding.url === 'string'
-    ? funding.url
-    : undefined;
+  const value =
+    typeof funding === 'string'
+      ? funding
+      : isRecord(funding) && typeof funding.url === 'string'
+        ? funding.url
+        : undefined;
   if (!value) return undefined;
 
   try {

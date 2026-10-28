@@ -31,9 +31,8 @@ export function makeLocalizedPath(
 ): string {
   const base = normalizeBaseURL(baseURL);
   const defaultLocale = locales[0] ?? 'en';
-  const localePrefix = locale.toLowerCase() === defaultLocale.toLowerCase()
-    ? ''
-    : `/${encodeURIComponent(locale)}`;
+  const localePrefix =
+    locale.toLowerCase() === defaultLocale.toLowerCase() ? '' : `/${encodeURIComponent(locale)}`;
   const route = pathname === '/' ? '' : `/${pathname.split('/').filter(Boolean).join('/')}`;
   const localizedPath = `${base === '/' ? '' : base}${localePrefix}${route}`;
   if (!route && localizedPath) return `${localizedPath}/`;

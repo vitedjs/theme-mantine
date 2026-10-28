@@ -1,4 +1,5 @@
 import { describe, expect, it } from 'vitest';
+
 import { themeI18n } from './i18n';
 
 describe('theme translations', () => {

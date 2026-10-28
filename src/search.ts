@@ -30,10 +30,10 @@ export function createPageSearch(documents: SearchDocument[]): (query: string) =
     const trimmedQuery = query.trim();
     if (!trimmedQuery) return documents;
 
-    const searchOptions = /[\p{Script=Han}\p{Script=Hiragana}\p{Script=Katakana}\p{Script=Hangul}]/u
-      .test(trimmedQuery)
-      ? { keys: ['cjkContent'] }
-      : undefined;
+    const searchOptions =
+      /[\p{Script=Han}\p{Script=Hiragana}\p{Script=Katakana}\p{Script=Hangul}]/u.test(trimmedQuery)
+        ? { keys: ['cjkContent'] }
+        : undefined;
     return fuse.search(trimmedQuery, searchOptions).map(({ item }) => item.document);
   };
 }

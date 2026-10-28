@@ -2,27 +2,33 @@
   "name": "@vited/theme-mantine",
   "version": "0.1.0",
   "description": "Mantine React theme for Vited documentation sites",
+  "keywords": [
+    "documentation",
+    "mantine",
+    "react",
+    "theme",
+    "vite"
+  ],
   "homepage": "https://github.com/vitedjs/theme-mantine#readme",
-  "repository": {
-    "type": "git",
-    "url": "git+https://github.com/vitedjs/theme-mantine.git"
+  "bugs": {
+    "url": "https://github.com/vitedjs/theme-mantine/issues"
   },
-  "license": "MIT",
+  "license": "MPL-2.0",
   "author": {
     "name": "Guo Yunhe",
     "email": "i@guoyunhe.me"
   },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/vitedjs/theme-mantine.git"
+  },
+  "files": [
+    "dist",
+    "CHANGELOG.md",
+    "LICENSE",
+    "README.md"
+  ],
   "type": "module",
-  "engines": {
-    "node": "^20.19.0 || >=22.12.0"
-  },
-  "devEngines": {
-    "packageManager": {
-      "name": "pnpm",
-      "version": ">=12.14.0",
-      "onFail": "error"
-    }
-  },
   "main": "./dist/index.mjs",
   "types": "./dist/index.d.mts",
   "exports": {
@@ -31,13 +37,12 @@
       "import": "./dist/index.mjs"
     }
   },
-  "files": [
-    "dist",
-    "LICENSE",
-    "README.md"
-  ],
   "scripts": {
     "build": "tsdown",
+    "format": "oxfmt --write .",
+    "format:check": "oxfmt --check .",
+    "lint": "oxlint && stylelint \"**/*.css\"",
+    "prepare": "husky",
     "test": "vitest run",
     "test:watch": "vitest"
   },
@@ -52,19 +57,49 @@
     "shiki": "^4.5.0",
     "wouter": "^3.13.0"
   },
-  "peerDependencies": {
-    "@mantine/core": "^9.7.4",
-    "react": "^18.3.0 || ^19.0.0"
-  },
   "devDependencies": {
+    "@guoyunhe/editorconfig": "^0.3.0",
+    "@guoyunhe/oxfmt-config": "^1.1.0",
     "@mantine/core": "^9.7.4",
     "@types/node": "^22.15.30",
     "@types/react": "^19.1.0",
     "@vited/cli": "link:../cli",
     "@vited/core": "link:../core",
+    "husky": "^9.1.7",
+    "lint-staged": "^17.6.0",
+    "oxfmt": "^0.74.0",
+    "oxlint": "^1.89.0",
+    "oxlint-config-recommended": "^1.1.0",
     "react": "^19.3.1",
+    "stylelint": "^17.16.0",
+    "stylelint-config-standard": "^40.0.0",
     "tsdown": "^0.23.2",
     "typescript": "^5.8.3",
     "vitest": "^5.0.5"
+  },
+  "peerDependencies": {
+    "@mantine/core": "^9.7.4",
+    "react": "^18.3.0 || ^19.0.0"
+  },
+  "lint-staged": {
+    "*.{js,mjs,cjs,ts,mts,cts,jsx,tsx,vue}": [
+      "oxfmt --write",
+      "oxlint --fix"
+    ],
+    "*.css": [
+      "oxfmt --write",
+      "stylelint --fix"
+    ],
+    "*.{json,jsonc,scss,less,htm,html,md,mdx,yaml,yml}": "oxfmt --write"
+  },
+  "devEngines": {
+    "packageManager": {
+      "name": "pnpm",
+      "version": ">=12.14.0",
+      "onFail": "error"
+    }
+  },
+  "engines": {
+    "node": "^20.19.0 || >=22.12.0"
   }
 }

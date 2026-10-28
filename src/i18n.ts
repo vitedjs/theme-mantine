@@ -3,60 +3,58 @@ import { initReactI18next } from 'react-i18next';
 
 export const themeI18n = i18n.createInstance();
 
-void themeI18n
-  .use(initReactI18next)
-  .init({
-    fallbackLng: 'en',
-    supportedLngs: ['en', 'zh'],
-    load: 'languageOnly',
-    resources: {
-      en: {
-        translation: {
-          language: 'Language',
-          navigation: 'Navigation',
-          noDocuments: 'No documents were found in the configured docs directory.',
-          openNavigation: 'Open navigation',
-          closeNavigation: 'Close navigation',
-          switchToLight: 'Switch to light mode',
-          switchToDark: 'Switch to dark mode',
-          search: 'Search',
-          searchPlaceholder: 'Search documentation',
-          noSearchResults: 'No matching documents found',
-          github: 'GitHub',
-          donate: 'Donate',
-          copy: 'Copy',
-          copied: 'Copied',
-          locales: {
-            en: 'English',
-            zh: '简体中文',
-          },
-        },
-      },
-      zh: {
-        translation: {
-          language: '语言',
-          navigation: '导航',
-          noDocuments: '在配置的文档目录中没有找到文档。',
-          openNavigation: '打开导航',
-          closeNavigation: '关闭导航',
-          switchToLight: '切换到浅色模式',
-          switchToDark: '切换到深色模式',
-          search: '搜索',
-          searchPlaceholder: '搜索文档',
-          noSearchResults: '没有找到匹配的文档',
-          github: 'GitHub',
-          donate: '赞助',
-          copy: '复制',
-          copied: '已复制',
-          locales: {
-            en: 'English',
-            zh: '简体中文',
-          },
+void themeI18n.use(initReactI18next).init({
+  fallbackLng: 'en',
+  supportedLngs: ['en', 'zh'],
+  load: 'languageOnly',
+  resources: {
+    en: {
+      translation: {
+        language: 'Language',
+        navigation: 'Navigation',
+        noDocuments: 'No documents were found in the configured docs directory.',
+        openNavigation: 'Open navigation',
+        closeNavigation: 'Close navigation',
+        switchToLight: 'Switch to light mode',
+        switchToDark: 'Switch to dark mode',
+        search: 'Search',
+        searchPlaceholder: 'Search documentation',
+        noSearchResults: 'No matching documents found',
+        github: 'GitHub',
+        donate: 'Donate',
+        copy: 'Copy',
+        copied: 'Copied',
+        locales: {
+          en: 'English',
+          zh: '简体中文',
         },
       },
     },
-    interpolation: {
-      escapeValue: false,
+    zh: {
+      translation: {
+        language: '语言',
+        navigation: '导航',
+        noDocuments: '在配置的文档目录中没有找到文档。',
+        openNavigation: '打开导航',
+        closeNavigation: '关闭导航',
+        switchToLight: '切换到浅色模式',
+        switchToDark: '切换到深色模式',
+        search: '搜索',
+        searchPlaceholder: '搜索文档',
+        noSearchResults: '没有找到匹配的文档',
+        github: 'GitHub',
+        donate: '赞助',
+        copy: '复制',
+        copied: '已复制',
+        locales: {
+          en: 'English',
+          zh: '简体中文',
+        },
+      },
     },
-    initImmediate: false,
-  });
+  },
+  interpolation: {
+    escapeValue: false,
+  },
+  initImmediate: false,
+});
