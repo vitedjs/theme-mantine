@@ -3,9 +3,9 @@ import { describe, expect, it } from 'vitest';
 import { findPage, type VitedPage } from './index';
 
 const pages: VitedPage[] = [
-  { path: '/', locale: 'en', title: 'Home', frontmatter: {}, component: () => null },
-  { path: '/', locale: 'zh', title: '首页', frontmatter: {}, component: () => null },
-  { path: '/guide', locale: 'en', title: 'Guide', frontmatter: {}, component: () => null },
+  { path: '/', locale: 'en', title: 'Home', frontmatter: {}, component: () => 'Home' },
+  { path: '/', locale: 'zh', title: '首页', frontmatter: {}, component: () => '首页' },
+  { path: '/guide', locale: 'en', title: 'Guide', frontmatter: {}, component: () => 'Guide' },
 ];
 
 describe('findPage()', () => {

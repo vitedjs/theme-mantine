@@ -24,10 +24,6 @@ void themeI18n.use(initReactI18next).init({
         donate: 'Donate',
         copy: 'Copy',
         copied: 'Copied',
-        locales: {
-          en: 'English',
-          zh: '简体中文',
-        },
       },
     },
     zh: {
@@ -46,10 +42,6 @@ void themeI18n.use(initReactI18next).init({
         donate: '赞助',
         copy: '复制',
         copied: '已复制',
-        locales: {
-          en: 'English',
-          zh: '简体中文',
-        },
       },
     },
   },

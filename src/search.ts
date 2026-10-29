@@ -10,7 +10,7 @@ export interface SearchDocument {
 export function createPageSearch(documents: SearchDocument[]): (query: string) => SearchDocument[] {
   const indexedDocuments = documents.map((document) => ({
     document,
-    cjkContent: `${document.title}${document.content}`.replace(
+    cjkContent: `${document.title}${document.content}`.replaceAll(
       /[^\p{Script=Han}\p{Script=Hiragana}\p{Script=Katakana}\p{Script=Hangul}]/gu,
       '',
     ),

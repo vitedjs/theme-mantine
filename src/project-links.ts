@@ -11,12 +11,12 @@ export function getProjectLinks(packageJSON: Record<string, unknown> = {}): Proj
 }
 
 function getGitHubRepositoryUrl(repository: unknown): string | undefined {
-  const repositoryUrl =
-    typeof repository === 'string'
-      ? repository
-      : isRecord(repository) && typeof repository.url === 'string'
-        ? repository.url
-        : undefined;
+  let repositoryUrl: string | undefined;
+  if (typeof repository === 'string') {
+    repositoryUrl = repository;
+  } else if (isRecord(repository) && typeof repository.url === 'string') {
+    repositoryUrl = repository.url;
+  }
   if (!repositoryUrl) return undefined;
 
   let normalized = repositoryUrl.trim().replace(/^git\+/, '');
@@ -26,7 +26,7 @@ function getGitHubRepositoryUrl(repository: unknown): string | undefined {
   if (ssh) normalized = `https://github.com/${ssh[1]}`;
 
   try {
-    const url = new URL(normalized);
+    const url = new globalThis.URL(normalized);
     if (url.protocol !== 'https:' && url.protocol !== 'http:') return undefined;
     if (url.hostname.toLowerCase() !== 'github.com') return undefined;
     const [owner, repositoryName] = url.pathname.split('/').filter(Boolean);
@@ -46,16 +46,16 @@ function getFundingUrl(funding: unknown): string | undefined {
     return undefined;
   }
 
-  const value =
-    typeof funding === 'string'
-      ? funding
-      : isRecord(funding) && typeof funding.url === 'string'
-        ? funding.url
-        : undefined;
+  let value: string | undefined;
+  if (typeof funding === 'string') {
+    value = funding;
+  } else if (isRecord(funding) && typeof funding.url === 'string') {
+    value = funding.url;
+  }
   if (!value) return undefined;
 
   try {
-    const url = new URL(value);
+    const url = new globalThis.URL(value);
     return url.protocol === 'https:' || url.protocol === 'http:' ? url.href : undefined;
   } catch {
     return undefined;

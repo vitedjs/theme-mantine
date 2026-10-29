@@ -24,7 +24,7 @@ import {
 import { Spotlight, type SpotlightActionData } from '@mantine/spotlight';
 import { GithubLogo, Heart, List, MagnifyingGlass, Moon, Sun, X } from '@phosphor-icons/react';
 import parse, { Element as HtmlElement, type DOMNode } from 'html-react-parser';
-import type { ComponentType, ReactElement, ReactNode } from 'react';
+import React, { type ComponentType, type ReactElement, type ReactNode } from 'react';
 import { Children, Fragment, isValidElement, useEffect, useMemo, useState } from 'react';
 import { I18nextProvider, useTranslation } from 'react-i18next';
 import { bundledLanguages, createHighlighter, type BundledLanguage } from 'shiki';
@@ -64,10 +64,12 @@ const codeHighlightAdapter = createShikiAdapter(
       const normalizedLanguage = language.toLowerCase();
       return normalizedLanguage in bundledLanguages
         ? bundledLanguages[normalizedLanguage as BundledLanguage]
-        : null;
+        : undefined;
     },
   },
 );
+
+const emptyLocales: string[] = [];
 
 interface MarkdownElementProps {
   children?: ReactNode;
@@ -121,14 +123,18 @@ function ThemeApp({
   pages,
   title = '',
   description = '',
-  supportedLocales = [],
-  baseURL = '/',
+  supportedLocales = emptyLocales,
   menu,
   searchIndex = [],
   packageJSON = {},
 }: VitedThemeProps): ReactElement {
-  const locales =
-    supportedLocales.length > 0 ? supportedLocales : [...new Set(pages.map((item) => item.locale))];
+  const locales = useMemo(
+    () =>
+      supportedLocales.length > 0
+        ? supportedLocales
+        : [...new Set(pages.map((item) => item.locale))],
+    [pages, supportedLocales],
+  );
   const [pathname, navigate] = useLocation();
   const route = resolveLocalizedRoute(pathname, locales);
   const locale = route.locale;
@@ -187,14 +193,14 @@ function ThemeApp({
   );
 
   useEffect(() => {
-    document.documentElement.lang = locale;
+    globalThis.document.documentElement.lang = locale;
     void i18n.changeLanguage(locale);
   }, [i18n, locale]);
 
   function changeLocale(nextLocale: string | null) {
     if (!nextLocale) return;
     const localizedPath = makeLocalizedPath('/', route.pathname, nextLocale, locales);
-    const url = new URL(window.location.href);
+    const url = new globalThis.URL(globalThis.location.href);
     url.searchParams.delete('lang');
     navigate(`${localizedPath}${url.search}${url.hash}`);
   }
@@ -229,7 +235,7 @@ function ThemeApp({
                 <Text c='dimmed' size='xs' lineClamp={1} visibleFrom='sm'>
                   {description}
                 </Text>
-              ) : null}
+              ) : undefined}
             </Stack>
           </Group>
           <Group gap='xs' wrap='nowrap'>
@@ -248,7 +254,7 @@ function ThemeApp({
               >
                 <Text size='sm'>{t('search')}</Text>
               </Button>
-            ) : null}
+            ) : undefined}
             {projectLinks.github ? (
               <Tooltip label={t('github')} withArrow>
                 <ActionIcon
@@ -263,7 +269,7 @@ function ThemeApp({
                   <GithubLogo size={20} />
                 </ActionIcon>
               </Tooltip>
-            ) : null}
+            ) : undefined}
             {projectLinks.funding ? (
               <Tooltip label={t('donate')} withArrow>
                 <ActionIcon
@@ -278,13 +284,13 @@ function ThemeApp({
                   <Heart size={20} color='red' />
                 </ActionIcon>
               </Tooltip>
-            ) : null}
+            ) : undefined}
             {locales.length > 1 ? (
               <Select
                 aria-label={t('language')}
                 data={locales.map((item) => ({
                   value: item,
-                  label: t(`locales.${item}`, { defaultValue: item }),
+                  label: new Intl.DisplayNames([item], { type: 'language' }).of(item) ?? item,
                 }))}
                 value={locale}
                 onChange={changeLocale}
@@ -292,7 +298,7 @@ function ThemeApp({
                 w={120}
                 size='sm'
               />
-            ) : null}
+            ) : undefined}
             <ActionIcon
               variant='default'
               size='lg'
@@ -348,7 +354,7 @@ function ThemeApp({
           highlightQuery
           limit={8}
         />
-      ) : null}
+      ) : undefined}
     </AppShell>
   );
 }
@@ -395,7 +401,10 @@ function PageNavigation({
 
   for (const page of pages) {
     let level = nodes;
-    const segments = page.path.split('/').filter(Boolean).map(decodeURIComponent);
+    const segments = page.path
+      .split('/')
+      .filter(Boolean)
+      .map((segment) => decodeURIComponent(segment));
     if (segments.length === 0) {
       level.push({ key: `${page.locale}:${page.path}`, title: page.title, page, children: [] });
       continue;
@@ -432,7 +441,7 @@ function renderPageNavigationNodes(nodes: PageNavigationNode[], props: Navigatio
         )}
         component={node.page ? 'a' : 'button'}
       >
-        {node.children.length > 0 ? renderPageNavigationNodes(node.children, props) : null}
+        {node.children.length > 0 ? renderPageNavigationNodes(node.children, props) : undefined}
       </NavLink>
     );
 
@@ -483,7 +492,7 @@ function MenuItems({
                 activePath={activePath}
                 onNavigate={onNavigate}
               />
-            ) : null}
+            ) : undefined}
           </NavLink>
         );
         return entry.path ? (
@@ -524,34 +533,31 @@ function getLocalizedPages(
 }
 
 function getSearchShortcut(): string {
-  return typeof navigator !== 'undefined' && /Mac|iPhone|iPad|iPod/.test(navigator.platform)
+  return globalThis.navigator !== undefined &&
+    /Mac|iPhone|iPad|iPod/.test(globalThis.navigator.platform)
     ? '⌘ K'
     : 'Ctrl + K';
 }
 
 function humanize(value: string): string {
-  return decodeURIComponent(value).replace(/[-_]/g, ' ');
+  return decodeURIComponent(value).replaceAll(/[-_]/g, ' ');
 }
 
 function MarkdownHtml({ html = '' }: MarkdownElementProps): ReactElement {
+  return <>{parse(html, { replace: replaceMarkdownHtmlNode })}</>;
+}
+
+function replaceMarkdownHtmlNode(node: DOMNode) {
+  if (!(node instanceof HtmlElement) || node.name !== 'pre') return;
+  const codeNode = node.children.find(
+    (child): child is HtmlElement => child instanceof HtmlElement && child.name === 'code',
+  );
+  if (!codeNode) return;
+  const code = codeNode.children.map(getHtmlText).join('');
   return (
-    <>
-      {parse(html, {
-        replace(node: DOMNode) {
-          if (!(node instanceof HtmlElement) || node.name !== 'pre') return;
-          const codeNode = node.children.find(
-            (child): child is HtmlElement => child instanceof HtmlElement && child.name === 'code',
-          );
-          if (!codeNode) return;
-          const code = codeNode.children.map(getHtmlText).join('');
-          return (
-            <MarkdownCodeBlock>
-              <code className={codeNode.attribs.class}>{code}</code>
-            </MarkdownCodeBlock>
-          );
-        },
-      })}
-    </>
+    <MarkdownCodeBlock>
+      <code className={codeNode.attribs.class}>{code}</code>
+    </MarkdownCodeBlock>
   );
 }
 
@@ -586,7 +592,7 @@ function getHtmlText(node: DOMNode): string {
 
 function getReactText(node: ReactNode): string {
   if (typeof node === 'string' || typeof node === 'number') return String(node);
-  if (Array.isArray(node)) return node.map(getReactText).join('');
+  if (Array.isArray(node)) return node.map((child) => getReactText(child)).join('');
   if (isValidElement<{ children?: ReactNode }>(node)) return getReactText(node.props.children);
   return '';
 }
