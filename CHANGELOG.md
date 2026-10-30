@@ -1,5 +1,15 @@
 # Changelog
 
+## 0.5.0 - 2026-10-30
+
+### Added
+
+- Show the project favicon to the left of the header title when Vited provides one.
+
+### Changed
+
+- Require `@vited/core` 0.4 or newer as a peer dependency.
+
 ## 0.4.0 - 2026-10-30
 
 ### Changed
