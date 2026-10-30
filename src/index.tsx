@@ -10,6 +10,7 @@ import {
   Container,
   Divider,
   Group,
+  Image,
   Kbd,
   MantineProvider,
   NavLink,
@@ -124,6 +125,8 @@ export interface VitedThemeProps {
   routeIndex: Record<string, number>;
   title?: string;
   description?: string;
+  /** Project favicon URL, displayed to the left of the title. */
+  favicon?: string;
   supportedLocales?: string[];
   baseURL?: string;
   /** Base URL of the client router, empty for the site root. */
@@ -139,6 +142,7 @@ function ThemeApp({
   routeIndex,
   title = '',
   description = '',
+  favicon = '',
   supportedLocales = emptyLocales,
   menu,
   searchIndex = [],
@@ -249,6 +253,7 @@ function ThemeApp({
                 {mobileOpened ? <X size={20} /> : <List size={20} />}
               </ActionIcon>
             ) : undefined}
+            {favicon ? <Image src={favicon} alt='' w={24} h={24} fit='contain' /> : undefined}
             <Stack gap={0}>
               <Text fw={700} lineClamp={1}>
                 {title || 'Documentation'}
