@@ -147,6 +147,12 @@ function ThemeApp({
     pages.find((item) => item.path === route.pathname && item.locale === locale) ??
     pages.find((item) => item.path === route.pathname);
   const localizedPages = getLocalizedPages(pages, locales);
+  const navigationPages = useMemo(
+    () => pages.filter((item) => item.locale === locale),
+    [pages, locale],
+  );
+  // A single page needs no navigation, unless the site configures a menu of its own.
+  const showNavigation = (menu?.length ?? 0) > 0 || navigationPages.length > 1;
   const markdownComponents = useMemo<MarkdownComponents>(
     () => ({ html: MarkdownHtml, pre: MarkdownCodeBlock }),
     [],
@@ -184,7 +190,7 @@ function ThemeApp({
     />
   ) : (
     <PageNavigation
-      pages={pages.filter((item) => item.locale === locale)}
+      pages={navigationPages}
       locales={locales}
       activePath={page?.path}
       locale={locale}
@@ -208,25 +214,27 @@ function ThemeApp({
   return (
     <AppShell
       header={{ height: 64 }}
-      navbar={{
-        width: 280,
-        breakpoint: 'sm',
-        collapsed: { mobile: !mobileOpened },
-      }}
+      navbar={
+        showNavigation
+          ? { width: 280, breakpoint: 'sm', collapsed: { mobile: !mobileOpened } }
+          : undefined
+      }
       padding='md'
     >
       <AppShell.Header>
         <Group h='100%' px='md' justify='space-between' wrap='nowrap'>
           <Group gap='sm' wrap='nowrap'>
-            <ActionIcon
-              variant='subtle'
-              size='lg'
-              hiddenFrom='sm'
-              aria-label={mobileOpened ? t('closeNavigation') : t('openNavigation')}
-              onClick={() => setMobileOpened((opened) => !opened)}
-            >
-              {mobileOpened ? <X size={20} /> : <List size={20} />}
-            </ActionIcon>
+            {showNavigation ? (
+              <ActionIcon
+                variant='subtle'
+                size='lg'
+                hiddenFrom='sm'
+                aria-label={mobileOpened ? t('closeNavigation') : t('openNavigation')}
+                onClick={() => setMobileOpened((opened) => !opened)}
+              >
+                {mobileOpened ? <X size={20} /> : <List size={20} />}
+              </ActionIcon>
+            ) : undefined}
             <Stack gap={0}>
               <Text fw={700} lineClamp={1}>
                 {title || 'Documentation'}
@@ -310,18 +318,20 @@ function ThemeApp({
           </Group>
         </Group>
       </AppShell.Header>
-      <AppShell.Navbar p='md'>
-        <AppShell.Section mb='sm'>
-          <Text size='sm' fw={600} c='dimmed'>
-            {t('navigation')}
-          </Text>
-        </AppShell.Section>
-        <AppShell.Section grow component={ScrollArea}>
-          <Stack component='nav' gap={4} aria-label={t('navigation')}>
-            {navigation}
-          </Stack>
-        </AppShell.Section>
-      </AppShell.Navbar>
+      {showNavigation ? (
+        <AppShell.Navbar p='md'>
+          <AppShell.Section mb='sm'>
+            <Text size='sm' fw={600} c='dimmed'>
+              {t('navigation')}
+            </Text>
+          </AppShell.Section>
+          <AppShell.Section grow component={ScrollArea}>
+            <Stack component='nav' gap={4} aria-label={t('navigation')}>
+              {navigation}
+            </Stack>
+          </AppShell.Section>
+        </AppShell.Navbar>
+      ) : undefined}
       <AppShell.Main>
         <Container size='lg' py='md'>
           <Switch location={pathname}>

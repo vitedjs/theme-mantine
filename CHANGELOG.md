@@ -1,5 +1,12 @@
 # Changelog
 
+## 0.3.0 - 2026-10-30
+
+### Changed
+
+- Hide the sidebar, including the mobile navigation toggle, when a locale has a single page and no `menu` is configured.
+- Require `@vited/core` 0.2 or newer as a peer dependency.
+
 ## 0.2.0 - 2026-10-28
 
 ### Changed
