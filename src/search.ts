@@ -1,7 +1,8 @@
 import Fuse from 'fuse.js';
 
 export interface SearchDocument {
-  path: string;
+  /** Path matched by the client router, e.g. `/zh/guide/start/`. */
+  pathname: string;
   locale: string;
   title: string;
   content: string;

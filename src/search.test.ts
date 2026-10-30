@@ -4,8 +4,18 @@ import { createPageSearch } from './search';
 
 describe('createPageSearch()', () => {
   const documents = [
-    { path: '/guide', locale: 'en', title: 'Getting started', content: 'Install the package.' },
-    { path: '/api', locale: 'en', title: 'API reference', content: 'Public methods and options.' },
+    {
+      pathname: '/guide/',
+      locale: 'en',
+      title: 'Getting started',
+      content: 'Install the package.',
+    },
+    {
+      pathname: '/api/',
+      locale: 'en',
+      title: 'API reference',
+      content: 'Public methods and options.',
+    },
   ];
 
   it('finds matching titles and body text with fuzzy search', () => {
@@ -21,7 +31,7 @@ describe('createPageSearch()', () => {
 
   it('matches Chinese phrases across punctuation and inline-code boundaries', () => {
     const chinesePage = {
-      path: '/guide',
+      pathname: '/zh/guide/',
       locale: 'zh',
       title: '快速开始',
       content: '创建 docs 目录并添加 Markdown 文件。',

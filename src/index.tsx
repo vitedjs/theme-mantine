@@ -28,11 +28,10 @@ import React, { type ComponentType, type ReactElement, type ReactNode } from 're
 import { Children, Fragment, isValidElement, useEffect, useMemo, useState } from 'react';
 import { I18nextProvider, useTranslation } from 'react-i18next';
 import { bundledLanguages, createHighlighter, type BundledLanguage } from 'shiki';
-import { Link, Route, Router, Switch, useLocation } from 'wouter';
+import { Link, Router, useLocation } from 'wouter';
 
 import { themeI18n } from './i18n';
 import { getProjectLinks } from './project-links';
-import { makeLocalizedPath, normalizeBaseURL, resolveLocalizedRoute } from './routing';
 import { createPageSearch, type SearchDocument } from './search';
 
 import '@mantine/core/styles.css';
@@ -79,48 +78,65 @@ interface MarkdownElementProps {
 type MarkdownComponents = Record<string, ComponentType<MarkdownElementProps>>;
 
 export interface VitedPage {
+  /** Route without locale prefix, e.g. `/guide/start`. */
   path: string;
   locale: string;
+  /** Path matched by the client router, e.g. `/zh/guide/start/`. */
+  pathname: string;
+  /** Page URL with the base URL, e.g. `/docs/zh/guide/start/`. */
+  url: string;
   title: string;
   frontmatter: Record<string, unknown>;
   component: ComponentType<{ components?: MarkdownComponents }>;
 }
 
-export interface VitedThemeProps {
-  pages: VitedPage[];
-  title?: string;
-  description?: string;
-  supportedLocales?: string[];
-  baseURL?: string;
-  menu?: VitedMenuEntry[] | null;
-  searchIndex?: SearchDocument[];
-  packageJSON?: Record<string, unknown>;
+export interface VitedRoute {
+  /** Route without locale prefix, e.g. `/guide/start`. */
+  path: string;
+  locale: string;
+  /** Path matched by the client router, e.g. `/zh/guide/start/`. */
+  pathname: string;
+  /** Page URL with the base URL, e.g. `/docs/zh/guide/start/`. */
+  url: string;
+  /** Index of the page that renders this route. */
+  page: number;
 }
 
 export interface VitedMenuEntry {
   divider?: boolean;
   text?: string;
   path?: string;
+  /** Pathnames of the entry per locale, e.g. `{ en: '/guide/', zh: '/zh/guide/' }`. */
+  pathnames?: Record<string, string>;
+  /** URLs of the entry per locale, e.g. `{ en: '/docs/guide/', zh: '/docs/zh/guide/' }`. */
+  urls?: Record<string, string>;
   file?: string;
   link?: string;
   flag?: 'experimental' | 'new' | 'deprecated';
   children?: VitedMenuEntry[];
 }
 
-export function findPage(
-  pages: VitedPage[],
-  pathname: string,
-  locale?: string,
-): VitedPage | undefined {
-  return (
-    pages.find((page) => page.path === pathname && page.locale === locale) ??
-    pages.find((page) => page.path === pathname) ??
-    pages[0]
-  );
+export interface VitedThemeProps {
+  pages: VitedPage[];
+  /** Every page route in every configured locale, with the page that renders it. */
+  routes: VitedRoute[];
+  /** Route lookup by pathname, with and without the trailing slash. */
+  routeIndex: Record<string, number>;
+  title?: string;
+  description?: string;
+  supportedLocales?: string[];
+  baseURL?: string;
+  /** Base URL of the client router, empty for the site root. */
+  basePath?: string;
+  menu?: VitedMenuEntry[] | null;
+  searchIndex?: SearchDocument[];
+  packageJSON?: Record<string, unknown>;
 }
 
 function ThemeApp({
   pages,
+  routes,
+  routeIndex,
   title = '',
   description = '',
   supportedLocales = emptyLocales,
@@ -136,17 +152,14 @@ function ThemeApp({
     [pages, supportedLocales],
   );
   const [pathname, navigate] = useLocation();
-  const route = resolveLocalizedRoute(pathname, locales);
-  const locale = route.locale;
+  const route = routes[routeIndex[pathname] ?? -1];
+  const locale = route?.locale ?? locales[0] ?? 'en';
+  const Content = route ? pages[route.page].component : undefined;
   const { t, i18n } = useTranslation();
   const [mobileOpened, setMobileOpened] = useState(false);
   const { setColorScheme } = useMantineColorScheme();
   const colorScheme = useComputedColorScheme('light', { getInitialValueInEffect: true });
   const projectLinks = useMemo(() => getProjectLinks(packageJSON), [packageJSON]);
-  const page =
-    pages.find((item) => item.path === route.pathname && item.locale === locale) ??
-    pages.find((item) => item.path === route.pathname);
-  const localizedPages = getLocalizedPages(pages, locales);
   const navigationPages = useMemo(
     () => pages.filter((item) => item.locale === locale),
     [pages, locale],
@@ -165,16 +178,16 @@ function ThemeApp({
   const searchActions = useMemo<SpotlightActionData[]>(
     () =>
       searchPages.map((item) => ({
-        id: `${item.locale}:${item.path}`,
+        id: `${item.locale}:${item.pathname}`,
         label: item.title,
         description: item.content.slice(0, 140),
         keywords: item.content,
         onClick: () => {
-          navigate(makeLocalizedPath('/', item.path, locale, locales));
+          navigate(item.pathname);
           setMobileOpened(false);
         },
       })),
-    [searchPages, navigate, locale, locales],
+    [searchPages, navigate],
   );
   const searchActionsById = useMemo(
     () => new Map(searchActions.map((action) => [action.id, action])),
@@ -183,17 +196,14 @@ function ThemeApp({
   const navigation = menu?.length ? (
     <MenuItems
       entries={menu}
-      locales={locales}
       locale={locale}
-      activePath={page?.path}
+      activePath={route?.path}
       onNavigate={() => setMobileOpened(false)}
     />
   ) : (
     <PageNavigation
       pages={navigationPages}
-      locales={locales}
-      activePath={page?.path}
-      locale={locale}
+      activePath={route?.path}
       onNavigate={() => setMobileOpened(false)}
     />
   );
@@ -205,10 +215,14 @@ function ThemeApp({
 
   function changeLocale(nextLocale: string | null) {
     if (!nextLocale) return;
-    const localizedPath = makeLocalizedPath('/', route.pathname, nextLocale, locales);
+    // Keep the reader on the same route when it exists in the next locale.
+    const nextRoute =
+      routes.find((item) => item.path === route?.path && item.locale === nextLocale) ??
+      routes.find((item) => item.locale === nextLocale);
+    if (!nextRoute) return;
     const url = new globalThis.URL(globalThis.location.href);
     url.searchParams.delete('lang');
-    navigate(`${localizedPath}${url.search}${url.hash}`);
+    navigate(`${nextRoute.pathname}${url.search}${url.hash}`);
   }
 
   return (
@@ -334,19 +348,11 @@ function ThemeApp({
       ) : undefined}
       <AppShell.Main>
         <Container size='lg' py='md'>
-          <Switch location={pathname}>
-            {localizedPages.map(({ pathname: localizedPath, page: localizedPage }) => {
-              const Content = localizedPage.component;
-              return (
-                <Route key={`${localizedPath}:${localizedPage.locale}`} path={localizedPath}>
-                  <Content components={markdownComponents} />
-                </Route>
-              );
-            })}
-            <Route>
-              <Text c='dimmed'>{t('noDocuments')}</Text>
-            </Route>
-          </Switch>
+          {Content ? (
+            <Content components={markdownComponents} />
+          ) : (
+            <Text c='dimmed'>{t('noDocuments')}</Text>
+          )}
         </Container>
       </AppShell.Main>
       {searchIndex.length > 0 ? (
@@ -370,12 +376,11 @@ function ThemeApp({
 }
 
 export function VitedTheme(props: VitedThemeProps): ReactElement {
-  const normalizedBaseURL = normalizeBaseURL(props.baseURL ?? '/');
   return (
     <MantineProvider defaultColorScheme='auto'>
       <CodeHighlightAdapterProvider adapter={codeHighlightAdapter}>
         <I18nextProvider i18n={themeI18n}>
-          <Router base={normalizedBaseURL === '/' ? '' : normalizedBaseURL}>
+          <Router base={props.basePath ?? ''}>
             <ThemeApp {...props} />
           </Router>
         </I18nextProvider>
@@ -394,7 +399,6 @@ interface PageNavigationNode {
 }
 
 interface NavigationProps {
-  locales: string[];
   locale: string;
   activePath?: string;
   onNavigate: () => void;
@@ -402,9 +406,7 @@ interface NavigationProps {
 
 function PageNavigation({
   pages,
-  locales,
   activePath,
-  locale,
   onNavigate,
 }: NavigationProps & { pages: VitedPage[] }): ReactElement {
   const nodes: PageNavigationNode[] = [];
@@ -436,7 +438,7 @@ function PageNavigation({
     }
   }
 
-  return <>{renderPageNavigationNodes(nodes, { locales, locale, activePath, onNavigate })}</>;
+  return <>{renderPageNavigationNodes(nodes, { activePath, onNavigate })}</>;
 }
 
 function renderPageNavigationNodes(nodes: PageNavigationNode[], props: NavigationProps): ReactNode {
@@ -456,12 +458,7 @@ function renderPageNavigationNodes(nodes: PageNavigationNode[], props: Navigatio
     );
 
     return node.page ? (
-      <Link
-        key={node.key}
-        to={makeLocalizedPath('/', node.page.path, props.locale, props.locales)}
-        asChild
-        onClick={props.onNavigate}
-      >
+      <Link key={node.key} to={node.page.pathname} asChild onClick={props.onNavigate}>
         {navLink}
       </Link>
     ) : (
@@ -472,7 +469,6 @@ function renderPageNavigationNodes(nodes: PageNavigationNode[], props: Navigatio
 
 function MenuItems({
   entries,
-  locales,
   locale,
   activePath,
   onNavigate,
@@ -481,9 +477,7 @@ function MenuItems({
     <>
       {entries.map((entry, index) => {
         if (entry.divider) return <Divider key={`divider-${index}`} my='xs' />;
-        const href = entry.path
-          ? makeLocalizedPath('/', entry.path, locale, locales)
-          : (entry.link ?? '#');
+        const href = entry.path ? (entry.pathnames?.[locale] ?? '#') : (entry.link ?? '#');
         const label = entry.text ?? entry.file ?? entry.path ?? entry.link ?? '';
         const navLink = (
           <NavLink
@@ -497,7 +491,6 @@ function MenuItems({
             {entry.children?.length ? (
               <MenuItems
                 entries={entry.children}
-                locales={locales}
                 locale={locale}
                 activePath={activePath}
                 onNavigate={onNavigate}
@@ -515,31 +508,6 @@ function MenuItems({
       })}
     </>
   );
-}
-
-function getLocalizedPages(
-  pages: VitedPage[],
-  locales: string[],
-): Array<{ pathname: string; page: VitedPage }> {
-  const pagePaths = [...new Set(pages.map((page) => page.path))];
-  const routes: Array<{ pathname: string; page: VitedPage }> = [];
-  const seen = new Set<string>();
-
-  for (const locale of locales) {
-    for (const pagePath of pagePaths) {
-      const page =
-        pages.find((item) => item.path === pagePath && item.locale === locale) ??
-        pages.find((item) => item.path === pagePath);
-      if (!page) continue;
-
-      const pathname = makeLocalizedPath('/', pagePath, locale, locales);
-      if (seen.has(pathname)) continue;
-      seen.add(pathname);
-      routes.push({ pathname, page });
-    }
-  }
-
-  return routes;
 }
 
 function getSearchShortcut(): string {
