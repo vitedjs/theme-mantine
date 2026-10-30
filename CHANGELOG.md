@@ -1,5 +1,13 @@
 # Changelog
 
+## 0.4.0 - 2026-10-30
+
+### Changed
+
+- Consume the page and route data resolved by Vited, so the theme no longer builds page paths. Navigation, search results, and the language selector use the pathnames they receive.
+- Page URLs are directory style and end with a slash.
+- Require `@vited/core` 0.3 or newer as a peer dependency.
+
 ## 0.3.0 - 2026-10-30
 
 ### Changed
