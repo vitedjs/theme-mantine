@@ -518,8 +518,8 @@ function MenuItems({
 function getSearchShortcut(): string {
   return globalThis.navigator !== undefined &&
     /Mac|iPhone|iPad|iPod/.test(globalThis.navigator.platform)
-    ? '⌘ K'
-    : 'Ctrl + K';
+    ? '⌘K'
+    : 'Ctrl+K';
 }
 
 function humanize(value: string): string {
