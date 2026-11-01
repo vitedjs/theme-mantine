@@ -13,14 +13,14 @@ concurrency:
   cancel-in-progress: false
 defaults:
   run:
-    working-directory: theme-bootstrap
+    working-directory: theme-mantine
 jobs:
   build:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v6
         with:
-          path: theme-bootstrap
+          path: theme-mantine
       # @vited/cli and @vited/core are linked from sibling directories
       - uses: actions/checkout@v6
         with:
@@ -30,11 +30,6 @@ jobs:
         with:
           repository: vitedjs/core
           path: core
-      # @vited/core links @vited/theme-mantine for its own docs
-      - uses: actions/checkout@v6
-        with:
-          repository: vitedjs/theme-mantine
-          path: theme-mantine
       - uses: actions/setup-node@v6
         with:
           node-version: 22
@@ -57,7 +52,7 @@ jobs:
       - run: pnpm run docs:build
       - uses: actions/upload-pages-artifact@v4
         with:
-          path: ./theme-bootstrap/docs_dist
+          path: ./theme-mantine/docs_dist
   deploy:
     environment:
       name: github-pages
