@@ -266,7 +266,7 @@ function ThemeApp({
           ? { width: 280, breakpoint: 'sm', collapsed: { mobile: !mobileOpened } }
           : undefined
       }
-      aside={{ width: 240, breakpoint: 'lg', collapsed: { mobile: true } }}
+      aside={{ width: 280, breakpoint: 'lg', collapsed: { mobile: true } }}
       padding='md'
     >
       <AppShell.Header>
