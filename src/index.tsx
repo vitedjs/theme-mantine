@@ -5,10 +5,12 @@ import {
 } from '@mantine/code-highlight';
 import {
   ActionIcon,
+  Anchor,
   AppShell,
   Button,
   Container,
   Divider,
+  Drawer,
   Group,
   Image,
   Kbd,
@@ -23,10 +25,27 @@ import {
   useMantineColorScheme,
 } from '@mantine/core';
 import { Spotlight, type SpotlightActionData } from '@mantine/spotlight';
-import { GithubLogo, Heart, List, MagnifyingGlass, Moon, Sun, X } from '@phosphor-icons/react';
+import {
+  GithubLogo,
+  Heart,
+  List,
+  ListBullets,
+  MagnifyingGlass,
+  Moon,
+  Sun,
+  X,
+} from '@phosphor-icons/react';
 import parse, { Element as HtmlElement, type DOMNode } from 'html-react-parser';
 import React, { type ComponentType, type ReactElement, type ReactNode } from 'react';
-import { Children, Fragment, isValidElement, useEffect, useMemo, useState } from 'react';
+import {
+  Children,
+  Fragment,
+  isValidElement,
+  useCallback,
+  useEffect,
+  useMemo,
+  useState,
+} from 'react';
 import { I18nextProvider, useTranslation } from 'react-i18next';
 import { bundledLanguages, createHighlighter, type BundledLanguage } from 'shiki';
 import { Link, Router, useLocation } from 'wouter';
@@ -34,10 +53,12 @@ import { Link, Router, useLocation } from 'wouter';
 import { themeI18n } from './i18n';
 import { getProjectLinks } from './project-links';
 import { createPageSearch, type SearchDocument } from './search';
+import { collectTocHeadings, useActiveHeading, type TocHeading } from './toc';
 
 import '@mantine/core/styles.css';
 import '@mantine/code-highlight/styles.css';
 import '@mantine/spotlight/styles.css';
+import './index.css';
 
 const codeHighlightAdapter = createShikiAdapter(
   () =>
@@ -161,6 +182,14 @@ function ThemeApp({
   const Content = route ? pages[route.page].component : undefined;
   const { t, i18n } = useTranslation();
   const [mobileOpened, setMobileOpened] = useState(false);
+  const [tocOpened, setTocOpened] = useState(false);
+  const [tocHeadings, setTocHeadings] = useState<TocHeading[]>([]);
+  const activeHeadingId = useActiveHeading(tocHeadings);
+  // Collect the outline when a page mounts; the keyed wrapper remounts on navigation.
+  const attachContent = useCallback((element: HTMLDivElement | null) => {
+    setTocHeadings(element ? collectTocHeadings(element) : []);
+    if (element) setTocOpened(false);
+  }, []);
   const { setColorScheme } = useMantineColorScheme();
   const colorScheme = useComputedColorScheme('light', { getInitialValueInEffect: true });
   const projectLinks = useMemo(() => getProjectLinks(packageJSON), [packageJSON]);
@@ -237,6 +266,7 @@ function ThemeApp({
           ? { width: 280, breakpoint: 'sm', collapsed: { mobile: !mobileOpened } }
           : undefined
       }
+      aside={{ width: 240, breakpoint: 'lg', collapsed: { mobile: true } }}
       padding='md'
     >
       <AppShell.Header>
@@ -351,15 +381,66 @@ function ThemeApp({
           </AppShell.Section>
         </AppShell.Navbar>
       ) : undefined}
+      <AppShell.Aside
+        p='md'
+        style={{ overflowY: 'auto' }}
+        aria-hidden={tocHeadings.length > 0 ? undefined : true}
+      >
+        {tocHeadings.length > 0 ? (
+          <>
+            <Text size='sm' fw={600} c='dimmed' mb='sm'>
+              {t('tableOfContents')}
+            </Text>
+            <TocTree
+              headings={tocHeadings}
+              activeId={activeHeadingId}
+              ariaLabel={t('tableOfContents')}
+            />
+          </>
+        ) : undefined}
+      </AppShell.Aside>
       <AppShell.Main>
         <Container size='lg' py='md'>
           {Content ? (
-            <Content components={markdownComponents} />
+            <div className='vited-mantine-content' key={pathname} ref={attachContent}>
+              <Content components={markdownComponents} />
+            </div>
           ) : (
             <Text c='dimmed'>{t('noDocuments')}</Text>
           )}
         </Container>
       </AppShell.Main>
+      {tocHeadings.length > 0 ? (
+        <>
+          <ActionIcon
+            className='vited-mantine-toc-toggle'
+            hiddenFrom='lg'
+            size={48}
+            radius='xl'
+            style={{ position: 'fixed', right: '1rem', bottom: '1rem' }}
+            aria-label={tocOpened ? t('closeTableOfContents') : t('openTableOfContents')}
+            aria-expanded={tocOpened}
+            onClick={() => setTocOpened((opened) => !opened)}
+          >
+            {tocOpened ? <X size={22} /> : <ListBullets size={22} />}
+          </ActionIcon>
+          <Drawer
+            opened={tocOpened}
+            onClose={() => setTocOpened(false)}
+            position='right'
+            size={300}
+            title={t('tableOfContents')}
+            transitionProps={{ duration: 0 }}
+          >
+            <TocTree
+              headings={tocHeadings}
+              activeId={activeHeadingId}
+              ariaLabel={t('tableOfContents')}
+              onNavigate={() => setTocOpened(false)}
+            />
+          </Drawer>
+        </>
+      ) : undefined}
       {searchIndex.length > 0 ? (
         <Spotlight
           actions={searchActions}
@@ -377,6 +458,56 @@ function ThemeApp({
         />
       ) : undefined}
     </AppShell>
+  );
+}
+
+interface TocTreeProps {
+  headings: TocHeading[];
+  activeId?: string;
+  ariaLabel: string;
+  onNavigate?: () => void;
+  level?: number;
+}
+
+function TocTree({
+  headings,
+  activeId,
+  ariaLabel,
+  onNavigate,
+  level = 0,
+}: TocTreeProps): ReactElement {
+  return (
+    <Stack
+      component={level === 0 ? 'nav' : 'div'}
+      aria-label={level === 0 ? ariaLabel : undefined}
+      gap={2}
+    >
+      {headings.map((heading) => (
+        <Fragment key={heading.id}>
+          <Anchor
+            href={`#${heading.id}`}
+            size='sm'
+            c={heading.id === activeId ? undefined : 'dimmed'}
+            fw={heading.id === activeId ? 600 : 400}
+            underline='hover'
+            truncate
+            style={{ paddingInlineStart: (heading.level - 2) * 12 }}
+            onClick={onNavigate}
+          >
+            {heading.text}
+          </Anchor>
+          {heading.children.length > 0 ? (
+            <TocTree
+              headings={heading.children}
+              activeId={activeId}
+              ariaLabel={ariaLabel}
+              onNavigate={onNavigate}
+              level={level + 1}
+            />
+          ) : undefined}
+        </Fragment>
+      ))}
+    </Stack>
   );
 }
 

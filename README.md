@@ -11,7 +11,7 @@ Search button or `Ctrl+K` / `⌘K`. GitHub and Donate links are shown in the
 header when the supplied `packageJSON` includes valid `repository` and
 `funding` URLs. The documentation favicon discovered by Vited is displayed to
 the left of the header title. Markdown and MDX fenced code blocks use Mantine CodeHighlight
-with Shiki syntax highlighting, copy controls, and translated copy labels.
+with Shiki syntax highlighting, copy controls, and translated copy labels. Markdown and MDX headings show an anchor link on hover, and the page outline is shown in a table of contents on the right of the content; on small screens it opens from a floating button.
 
 ```ts
 import { defineConfig } from '@vited/core';
