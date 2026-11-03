@@ -2,6 +2,20 @@
   scroll-margin-top: 5rem;
 }
 
+.vited-mantine-content table {
+  display: block;
+  max-width: 100%;
+  margin-bottom: 1rem;
+  overflow-x: auto;
+  border-collapse: collapse;
+}
+
+.vited-mantine-content table th,
+.vited-mantine-content table td {
+  padding: 0.375rem 0.75rem;
+  border: 1px solid var(--mantine-color-default-border);
+}
+
 /* The anchor is appended by the core MDX pipeline and stays out of the way until hover. */
 .vited-heading-anchor {
   margin-inline-start: 0.35em;
