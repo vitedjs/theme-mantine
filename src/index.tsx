@@ -242,7 +242,7 @@ function ThemeApp({
   );
 
   useEffect(() => {
-    globalThis.document.documentElement.lang = locale;
+    document.documentElement.lang = locale;
     void i18n.changeLanguage(locale);
   }, [i18n, locale]);
 
@@ -253,7 +253,7 @@ function ThemeApp({
       routes.find((item) => item.path === route?.path && item.locale === nextLocale) ??
       routes.find((item) => item.locale === nextLocale);
     if (!nextRoute) return;
-    const url = new globalThis.URL(globalThis.location.href);
+    const url = new URL(location.href);
     url.searchParams.delete('lang');
     navigate(`${nextRoute.pathname}${url.search}${url.hash}`);
   }
@@ -647,8 +647,7 @@ function MenuItems({
 }
 
 function getSearchShortcut(): string {
-  return globalThis.navigator !== undefined &&
-    /Mac|iPhone|iPad|iPod/.test(globalThis.navigator.platform)
+  return typeof navigator !== 'undefined' && /Mac|iPhone|iPad|iPod/.test(navigator.platform)
     ? '⌘K'
     : 'Ctrl+K';
 }
