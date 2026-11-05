@@ -70,7 +70,7 @@ function renderPageNavigationNodes(
           <Group justify='space-between' wrap='nowrap' w='100%'>
             <span>{node.title}</span>
             {node.badge && (
-              <Badge color={pageBadgeColors[node.badge]} size='xs' variant='light'>
+              <Badge color={pageBadgeColors[node.badge]} size='sm' variant='light'>
                 {node.badge}
               </Badge>
             )}
