@@ -92,6 +92,7 @@ const codeHighlightAdapter = createShikiAdapter(
 );
 
 const emptyLocales: string[] = [];
+const pageBadgeColors = { new: 'green', deprecated: 'orange' } as const;
 
 interface MarkdownElementProps {
   children?: ReactNode;
@@ -593,11 +594,11 @@ function renderPageNavigationNodes(nodes: PageNavigationNode[], props: Navigatio
         label={
           <Group justify='space-between' wrap='nowrap' w='100%'>
             <span>{node.title}</span>
-            {node.badge ? (
-              <Badge color={node.badge === 'new' ? 'green' : 'orange'} size='xs' variant='light'>
+            {node.badge && (
+              <Badge color={pageBadgeColors[node.badge]} size='xs' variant='light'>
                 {node.badge}
               </Badge>
-            ) : undefined}
+            )}
           </Group>
         }
         active={node.page?.path === props.activePath}
