@@ -2,6 +2,16 @@
 
 ## Unreleased
 
+## 0.5.3 - 2026-11-05
+
+### Added
+
+- Show `new` and `deprecated` badges from page frontmatter in the generated sidebar.
+
+### Changed
+
+- Use small badges in the generated sidebar.
+
 ## 0.5.1 - 2026-11-02
 
 ### Added
