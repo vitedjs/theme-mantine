@@ -7,6 +7,7 @@ import {
   ActionIcon,
   Anchor,
   AppShell,
+  Badge,
   Button,
   Container,
   Divider,
@@ -530,6 +531,7 @@ export default VitedTheme;
 interface PageNavigationNode {
   key: string;
   title: string;
+  badge?: 'new' | 'deprecated';
   page?: VitedPage;
   children: PageNavigationNode[];
 }
@@ -554,7 +556,13 @@ function PageNavigation({
       .filter(Boolean)
       .map((segment) => decodeURIComponent(segment));
     if (segments.length === 0) {
-      level.push({ key: `${page.locale}:${page.path}`, title: page.title, page, children: [] });
+      level.push({
+        key: `${page.locale}:${page.path}`,
+        title: page.title,
+        badge: getPageBadge(page),
+        page,
+        children: [],
+      });
       continue;
     }
 
@@ -569,6 +577,7 @@ function PageNavigation({
       level = node.children;
       if (route === page.path) {
         node.title = page.title;
+        node.badge = getPageBadge(page);
         node.page = page;
       }
     }
@@ -581,7 +590,16 @@ function renderPageNavigationNodes(nodes: PageNavigationNode[], props: Navigatio
   return nodes.map((node) => {
     const navLink = (
       <NavLink
-        label={node.title}
+        label={
+          <Group justify='space-between' wrap='nowrap' w='100%'>
+            <span>{node.title}</span>
+            {node.badge ? (
+              <Badge color={node.badge === 'new' ? 'green' : 'orange'} size='xs' variant='light'>
+                {node.badge}
+              </Badge>
+            ) : undefined}
+          </Group>
+        }
         active={node.page?.path === props.activePath}
         defaultOpened={node.children.some(
           (child) =>
@@ -601,6 +619,11 @@ function renderPageNavigationNodes(nodes: PageNavigationNode[], props: Navigatio
       <Fragment key={node.key}>{navLink}</Fragment>
     );
   });
+}
+
+function getPageBadge(page: VitedPage): 'new' | 'deprecated' | undefined {
+  const badge = page.frontmatter.badge;
+  return badge === 'new' || badge === 'deprecated' ? badge : undefined;
 }
 
 function MenuItems({
