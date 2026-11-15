@@ -30,6 +30,7 @@ import { type ReactElement, useCallback, useEffect, useMemo, useState } from 're
 import { useTranslation } from 'react-i18next';
 import { useLocation } from 'wouter';
 
+import { formatDocumentTitle } from '../document-title';
 import { getProjectLinks } from '../project-links';
 import { createPageSearch } from '../search';
 import { collectTocHeadings, useActiveHeading } from '../toc';
@@ -65,6 +66,7 @@ export function ThemeApp({
   const route = routes[routeIndex[pathname] ?? -1];
   const locale = route?.locale ?? locales[0] ?? 'en';
   const Content = route ? pages[route.page].component : undefined;
+  const pageTitle = route ? pages[route.page].title : '';
   const { t, i18n } = useTranslation();
   const [mobileOpened, setMobileOpened] = useState(false);
   const [tocOpened, setTocOpened] = useState(false);
@@ -128,6 +130,10 @@ export function ThemeApp({
     document.documentElement.lang = locale;
     void i18n.changeLanguage(locale);
   }, [i18n, locale]);
+
+  useEffect(() => {
+    document.title = formatDocumentTitle(pageTitle, title, packageJSON);
+  }, [packageJSON, pageTitle, title]);
 
   function changeLocale(nextLocale: string | null) {
     if (!nextLocale) return;
