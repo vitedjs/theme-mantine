@@ -1,6 +1,14 @@
 # Changelog
 
-## Unreleased
+## 0.6.0 - 2026-11-15
+
+### Added
+
+- Set the browser tab title for each page from the page title and the site title.
+
+### Changed
+
+- Require `@vited/core` 0.5 or newer as a peer dependency.
 
 ## 0.5.3 - 2026-11-05
 
