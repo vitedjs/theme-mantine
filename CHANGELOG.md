@@ -1,5 +1,11 @@
 # Changelog
 
+## 0.7.0 - 2026-11-15
+
+### Added
+
+- Show the `version` from the project's `package.json` in the header, in small muted text after the title.
+
 ## 0.6.0 - 2026-11-15
 
 ### Added
