@@ -31,6 +31,7 @@ import { useTranslation } from 'react-i18next';
 import { useLocation } from 'wouter';
 
 import { formatDocumentTitle } from '../document-title';
+import { formatPackageVersion } from '../package-version';
 import { getProjectLinks } from '../project-links';
 import { createPageSearch } from '../search';
 import { collectTocHeadings, useActiveHeading } from '../toc';
@@ -79,6 +80,7 @@ export function ThemeApp({
   const { setColorScheme } = useMantineColorScheme();
   const colorScheme = useComputedColorScheme('light', { getInitialValueInEffect: true });
   const projectLinks = useMemo(() => getProjectLinks(packageJSON), [packageJSON]);
+  const version = formatPackageVersion(packageJSON);
   const navigationPages = useMemo(
     () => pages.filter((item) => item.locale === locale),
     [pages, locale],
@@ -175,6 +177,12 @@ export function ThemeApp({
             <Stack gap={0}>
               <Text fw={700} lineClamp={1}>
                 {title || 'Documentation'}
+                {version ? (
+                  <Text component='span' fw={400} size='xs' c='dimmed'>
+                    {' '}
+                    {version}
+                  </Text>
+                ) : undefined}
               </Text>
               {description ? (
                 <Text c='dimmed' size='xs' lineClamp={1} visibleFrom='sm'>
