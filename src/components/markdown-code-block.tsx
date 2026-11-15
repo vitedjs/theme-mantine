@@ -8,6 +8,7 @@ import type { MarkdownElementProps } from '../types';
 export function MarkdownCodeBlock({ children }: MarkdownElementProps): ReactElement {
   const { t } = useTranslation();
   const colorScheme = useComputedColorScheme('light', { getInitialValueInEffect: true });
+  const shikiTheme = colorScheme === 'dark' ? 'github-dark' : 'github-light';
   const codeElement = Children.toArray(children).find(
     (child): child is ReactElement<{ className?: string; children?: ReactNode }> =>
       isValidElement(child) && child.type === 'code',
@@ -19,7 +20,7 @@ export function MarkdownCodeBlock({ children }: MarkdownElementProps): ReactElem
     <CodeHighlight
       code={getReactText(codeElement.props.children)}
       language={language}
-      codeColorScheme={colorScheme === 'dark' ? 'github-dark' : 'github-light'}
+      codeColorScheme={shikiTheme}
       withBorder
       radius='sm'
       copyLabel={t('copy')}
