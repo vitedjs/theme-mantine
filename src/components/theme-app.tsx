@@ -28,6 +28,7 @@ import {
 } from '@phosphor-icons/react';
 import { type ReactElement, useCallback, useEffect, useMemo, useState } from 'react';
 import { useTranslation } from 'react-i18next';
+import { ScrollRestore } from 'react-scroll-restore';
 import { useLocation } from 'wouter';
 
 import { formatDocumentTitle } from '../document-title';
@@ -38,6 +39,7 @@ import { collectTocHeadings, useActiveHeading } from '../toc';
 import type { MarkdownComponents, VitedThemeProps } from '../types';
 import { MarkdownCodeBlock } from './markdown-code-block';
 import { MarkdownHtml } from './markdown-html';
+import { MarkdownLink } from './markdown-link';
 import { MenuItems } from './menu-items';
 import { PageNavigation } from './page-navigation';
 import { TocTree } from './toc-tree';
@@ -87,7 +89,7 @@ export function ThemeApp({
   );
   const showNavigation = (menu?.length ?? 0) > 0 || navigationPages.length > 1;
   const markdownComponents = useMemo<MarkdownComponents>(
-    () => ({ html: MarkdownHtml, pre: MarkdownCodeBlock }),
+    () => ({ a: MarkdownLink, html: MarkdownHtml, pre: MarkdownCodeBlock }),
     [],
   );
   const searchPages = useMemo(
@@ -296,6 +298,7 @@ export function ThemeApp({
         ) : undefined}
       </AppShell.Aside>
       <AppShell.Main>
+        <ScrollRestore key={pathname} />
         <Container size='lg' py='md'>
           {Content ? (
             <div className='vited-mantine-content' key={pathname} ref={attachContent}>

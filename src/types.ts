@@ -1,9 +1,8 @@
-import type { ComponentType, ReactNode } from 'react';
+import type { AnchorHTMLAttributes, ComponentType } from 'react';
 
 import type { SearchDocument } from './search';
 
-export interface MarkdownElementProps {
-  children?: ReactNode;
+export interface MarkdownElementProps extends AnchorHTMLAttributes<HTMLAnchorElement> {
   html?: string;
 }
 

@@ -2,7 +2,6 @@ import { CodeHighlightAdapterProvider } from '@mantine/code-highlight';
 import { MantineProvider } from '@mantine/core';
 import type { ReactElement } from 'react';
 import { I18nextProvider } from 'react-i18next';
-import { ScrollRestore } from 'react-scroll-restore';
 import { Router } from 'wouter';
 
 import { codeHighlightAdapter } from './code-highlight';
@@ -23,7 +22,6 @@ export function VitedTheme(props: VitedThemeProps): ReactElement {
       <CodeHighlightAdapterProvider adapter={codeHighlightAdapter}>
         <I18nextProvider i18n={themeI18n}>
           <Router base={props.basePath ?? ''}>
-            <ScrollRestore />
             <ThemeApp {...props} />
           </Router>
         </I18nextProvider>
