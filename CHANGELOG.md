@@ -1,5 +1,15 @@
 # Changelog
 
+## 0.7.3 - 2026-11-17
+
+### Added
+
+- Navigate links inside Markdown and MDX pages with the client router instead of reloading the page.
+
+### Fixed
+
+- Restore the scroll position on every navigation with `react-scroll-restore` 0.2.0 by mounting the restore boundary in the page area.
+
 ## 0.7.2 - 2026-11-15
 
 ### Fixed

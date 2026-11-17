@@ -1,6 +1,6 @@
 {
   "name": "@vited/theme-mantine",
-  "version": "0.7.2",
+  "version": "0.7.3",
   "description": "Mantine React theme for Vited documentation sites",
   "keywords": [
     "documentation",
